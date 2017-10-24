@@ -47,6 +47,32 @@ if(!class_exists('SUPER_PayPal')) :
         public $add_on_slug = 'paypal_checkout';
         public $add_on_name = 'PayPal Checkout';
 
+        public $currency_codes = array(
+            'AUD' => array('symbol'=>'$', 'name'=>'Australian Dollar'),
+            'BRL' => array('symbol'=>'R$', 'name'=>'Brazilian Real'),
+            'CAD' => array('symbol'=>'$', 'name'=>'Canadian Dollar'),
+            'CZK' => array('symbol'=>'&#75;&#269;', 'name'=>'Czech Koruna'),
+            'DKK' => array('symbol'=>'&#107;&#114;', 'name'=>'Danish Krone'),
+            'EUR' => array('symbol'=>'&#128;', 'name'=>'Euro'),
+            'HKD' => array('symbol'=>'&#20803;', 'name'=>'Hong Kong Dollar'),
+            'HUF' => array('symbol'=>'&#70;&#116;', 'name'=>'Hungarian Forint', 'decimal'=>false),
+            'ILS' => array('symbol'=>'&#8362;', 'name'=>'Israeli New Sheqel'),
+            'JPY' => array('symbol'=>'&#165;', 'name'=>'Japanese Yen', 'decimal'=>false),
+            'MYR' => array('symbol'=>'&#82;&#77;', 'name'=>'Malaysian Ringgit'),
+            'MXN' => array('symbol'=>'&#36;', 'name'=>'Mexican Peso'),
+            'NOK' => array('symbol'=>'&#107;&#114;', 'name'=>'Norwegian Krone'),
+            'NZD' => array('symbol'=>'&#36;', 'name'=>'New Zealand Dollar'),
+            'PHP' => array('symbol'=>'&#80;&#104;&#11;', 'name'=>'Philippine Peso'),
+            'PLN' => array('symbol'=>'&#122;&#322;', 'name'=>'Polish Zloty'),
+            'GBP' => array('symbol'=>'&#163;', 'name'=>'Pound Sterling'),
+            'RUB' => array('symbol'=>'&#1088;&#1091;', 'name'=>'Russian Ruble'),
+            'SGD' => array('symbol'=>'&#36;', 'name'=>'Singapore Dollar'),
+            'SEK' => array('symbol'=>'&#107;&#114;', 'name'=>'Swedish Krona'),
+            'CHF' => array('symbol'=>'&#67;&#72;&#70;', 'name'=>'Swiss Franc'),
+            'TWD' => array('symbol'=>'&#36;', 'name'=>'Taiwan New Dollar', 'decimal'=>false),
+            'THB' => array('symbol'=>'&#3647;', 'name'=>'Thai Baht'),
+            'USD' => array('symbol'=>'$', 'name'=>'U.S. Dollar'),
+        );
 
         /**
          * @var SUPER_PayPal The single instance of the class
@@ -74,13 +100,156 @@ if(!class_exists('SUPER_PayPal')) :
             return self::$_instance;
         }
 
-        
+
         /**
          * SUPER_PayPal Constructor.
          *
          *  @since      1.0.0
         */
         public function __construct(){
+
+            $settings = array();
+            if(!isset($settings['paypal_mode'])) $settings['paypal_mode'] = 'sandbox';
+            if(!isset($settings['paypal_payment_type'])) $settings['paypal_payment_type'] = 'product_service';
+            if(!isset($settings['paypal_merchant_email'])) $settings['paypal_merchant_email'] = 'payments@feeling4design.nl';
+            if(!isset($settings['paypal_cancel_url'])) $settings['paypal_cancel_url'] = get_home_url();
+            if(!isset($settings['paypal_currency_code'])) $settings['paypal_currency_code'] = 'USD';
+            if(!isset($settings['paypal_items'])) $settings['paypal_items'] = '';
+
+            $entry_id = 1;
+            $form_id = 2;
+            $payment_type = 3;
+            $home_url = get_home_url(). "/";
+            if( strstr($home_url, '?') ) {
+                $return_url = $home_url . '&page=super_paypal_response&custom=' . $entry_id . '|' . $form_id . '|' . $payment_type;
+                $notify_url = $home_url . '&page=super_paypal_ipn';
+            }else{
+                $return_url = $home_url . '?page=super_paypal_response&custom=' . $entry_id . '|' . $form_id . '|' . $payment_type;
+                $notify_url = $home_url . '?page=super_paypal_ipn';
+            }
+
+
+            // _xclick                  - The button that the person clicked was a Buy Now button.
+            // _cart                    - For shopping cart purchases. The following variables specify the kind of shopping cart button that the person clicked:
+            //                              - add — Add to Cart buttons for the PayPal Shopping Cart
+            //                              - display — View Cart buttons for the PayPal Shopping Cart
+            //                              - upload — The Cart Upload command for third-party carts
+            // _xclick-subscriptions    - The button that the person clicked was a Subscribe button.
+            // _xclick-auto-billing     - The button that the person clicked was an Automatic Billing button.
+            // _xclick-payment-plan     - The button that the person clicked was an Installment Plan button.
+            // _donations               - The button that the person clicked was a Donate button.
+            // _s-xclick                - The button that the person clicked was protected from tampering by using encryption, or the button was saved in the merchant's PayPal account. PayPal determines which kind of button was clicked by decoding the encrypted code or by looking up the saved button in the merchant's account.
+
+
+            $cmd = '_xclick';
+            switch ($settings['paypal_payment_type']) {
+                case 'product_service':
+                    $cmd = '_xclick';
+                    break;
+                case 'donation':
+                    $cmd = '_donations';
+                    break;
+                case 'subscription':
+                    $cmd = '_xclick-subscriptions';
+                    break;
+            }
+            $cmd = '_cart';
+
+            $message = '';
+            $message .= '<form id="super_paypal_form" action="https://www.' . ($settings['paypal_mode']=='sandbox' ? 'sandbox.' : '') . 'paypal.com/cgi-bin/webscr" method="post">';
+            $message .= '<input type="hidden" name="cmd" value="' . $cmd . '">';
+            $message .= '<input type="hidden" name="charset" value="UTF-8">';
+            $message .= '<input type="hidden" name="business" value="' . esc_attr( $settings['paypal_merchant_email'] ) . '">';
+            $message .= '<input type="hidden" name="notify_url" value="' . esc_url($notify_url) . '">';
+            $message .= '<input type="hidden" name="return" value="' . esc_url($return_url) . '">';
+            $message .= '<input type="hidden" name="cancel_return" value="' . esc_url($settings['paypal_cancel_url']) . '">';
+            $message .= '<input type="hidden" name="currency_code" value="' . $settings['paypal_currency_code'] . '" />';
+
+            if( $cmd=='_xclick' ) {
+                $message .= '<input type="hidden" name="item_name" value="Some peanuts">';
+                $message .= '<input type="hidden" name="amount" value="10">';
+            }
+
+            if( $cmd=='_cart' ) {
+                $message .= '<input type="hidden" name="upload" value="1">';
+
+                $message .= '<input type="hidden" name="item_name_1" value="beach ball">';
+                $message .= '<input type="hidden" name="amount_1" value="15">';
+                $message .= '<input type="hidden" name="quantity_1" value="2">';
+
+                $message .= '<input type="hidden" name="item_name_2" value="towel">';
+                $message .= '<input type="hidden" name="amount_2" value="25">';
+                $message .= '<input type="hidden" name="quantity_2" value="3">';
+            }
+
+            if( $cmd=='_xclick-subscriptions' ) {
+                $message .= '<input type="hidden" name="item_name" value="Alice\'s Weekly Digest">';
+                $message .= '<input type="hidden" name="item_number" value="DIG Weekly">';
+
+                // Set the terms of the 1st trial period.
+                // An initial trial period that is free and lasts for seven days.
+                $message .= '<input type="hidden" name="a1" value="0">';
+                $message .= '<input type="hidden" name="p1" value="7">';
+                $message .= '<input type="hidden" name="t1" value="D">';
+
+                // Set the terms of the 2nd trial period.
+                // A second trial period that costs $5.00 USD and lasts for an additional three weeks.
+                $message .= '<input type="hidden" name="a2" value="5.00">';
+                $message .= '<input type="hidden" name="p2" value="3">';
+                $message .= '<input type="hidden" name="t2" value="W">';
+
+                // Set the terms of the regular subscription.
+                // The regular subscription begins four weeks after the subscriber signs up.
+                $message .= '<input type="hidden" name="a3" value="49.99">';
+                $message .= '<input type="hidden" name="p3" value="1">';
+                $message .= '<input type="hidden" name="t3" value="Y">';
+
+                // Set recurring payments until canceled.
+                $message .= '<input type="hidden" name="src" value="1">';
+            }
+
+            //foreach($settings['paypal_items'] as $k => $v){
+            //    $message .= '<input type="hidden" name="item_name" value="' . $item_name . '">';
+            //}
+            //$message .= '<input type="hidden" name="custom" value="' . $entry_id . '|' . $form_id . '|' . $payment_type . '">';
+            //$message .= '<input type="hidden" name="cbt" value="' . $continue_text . '">';
+            //$message .= '<input type="hidden" name="rm" value="2">';
+
+            //if( $settings['paypal_payment_type']=='subscription' ) {
+            //    $message .= '<input type="hidden" name="a3" value="' . $amount . '">';
+            //    $message .= '<input type="hidden" name="p3" value="' . $recurring_days . '">';
+            //    $message .= '<input type="hidden" name="t3" value="' . $recurring_type . '">';
+            //    $message .= '<input type="hidden" name="sra" value="' . $recurring_retry . '">';
+            //    $message .= '<input type="hidden" name="src" value="1">';
+            //    if( $recurring_time > 1 ) {
+            //        $message .= '<input type="hidden" name="srt" value="' . $recurring_time . '">';
+            //    }
+            //    if( $trial_period_val=='1' ) {
+            //        $message .= '<input type="hidden" name="a1" value="' . $trial_amount_val . '">';
+            //        $message .= '<input type="hidden" name="p1" value="' . $trial_days . '">';
+            //        $message .= '<input type="hidden" name="t1" value="' . $trial_recurring_type . '">';
+            //    }
+            //}else{
+            //    $message .= '<input type="hidden" name="amount" value="' . $amount . '">';
+            //}
+            //if( (isset($options['shipping_info'])) && ($options['shipping_info']==1) ) {
+            //    $message .= '<input type="hidden" name="first_name" value="' . $paypal_values['first_name'] . '" />';
+            //    $message .= '<input type="hidden" name="last_name" value="' . $paypal_values['last_name'] . '" />';
+            //    $message .= '<input type="hidden" name="email" value="' . $paypal_values['email'] . '" />';
+            //    $message .= '<input type="hidden" name="address1" value="' . $paypal_values['address1'] . '" />';
+            //    $message .= '<input type="hidden" name="address2" value="' . $paypal_values['address2'] . '" />';
+            //    $message .= '<input type="hidden" name="city" value="' . $paypal_values['city'] . '" />';
+            //    $message .= '<input type="hidden" name="state" value="' . $paypal_values['state'] . '" />';
+            //    $message .= '<input type="hidden" name="zip" value="' . $paypal_values['zip'] . '" />';
+            //    $message .= '<input type="hidden" name="country" value="' . $paypal_values['country'] . '" />';
+            //}
+            $message .= '<input type="submit" value="Pay with PayPal!" style="display:none;">';
+            $message .= '</form>';
+            $message .= '<script data-cfasync="false" type="text/javascript" language="javascript">';
+            $message .= 'document.getElementById("super_paypal_form").submit();';
+            $message .= '</script>';
+            echo $message;
+
             $this->init_hooks();
             do_action('super_paypal_loaded');
         }
@@ -360,76 +529,6 @@ if(!class_exists('SUPER_PayPal')) :
         */
         public static function before_email_success_msg( $atts ) {
 
-            require __DIR__ . '/../bootstrap.php';
-            use PayPal\Api\Amount;
-            use PayPal\Api\Details;
-            use PayPal\Api\Item;
-            use PayPal\Api\ItemList;
-            use PayPal\Api\Payer;
-            use PayPal\Api\Payment;
-            use PayPal\Api\RedirectUrls;
-            use PayPal\Api\Transaction;
-
-            $payer = new Payer();
-            $payer->setPaymentMethod("paypal");
-
-            $item1 = new Item();
-            $item1->setName('Ground Coffee 40 oz')
-                ->setCurrency('USD')
-                ->setQuantity(1)
-                ->setSku("123123") // Similar to `item_number` in Classic API
-                ->setPrice(7.5);
-            $item2 = new Item();
-            $item2->setName('Granola bars')
-                ->setCurrency('USD')
-                ->setQuantity(5)
-                ->setSku("321321") // Similar to `item_number` in Classic API
-                ->setPrice(2);
-
-            $itemList = new ItemList();
-            $itemList->setItems(array($item1, $item2));
-
-            $details = new Details();
-            $details->setShipping(1.2)
-                ->setTax(1.3)
-                ->setSubtotal(17.50);
-
-            $amount = new Amount();
-            $amount->setCurrency("USD")
-                ->setTotal(20)
-                ->setDetails($details);
-
-            $transaction = new Transaction();
-            $transaction->setAmount($amount)
-                ->setItemList($itemList)
-                ->setDescription("Payment description")
-                ->setInvoiceNumber(uniqid());
-
-            $baseUrl = getBaseUrl();
-            $redirectUrls = new RedirectUrls();
-            $redirectUrls->setReturnUrl("$baseUrl/ExecutePayment.php?success=true")
-                ->setCancelUrl("$baseUrl/ExecutePayment.php?success=false");
-
-            $payment = new Payment();
-            $payment->setIntent("sale")
-                ->setPayer($payer)
-                ->setRedirectUrls($redirectUrls)
-                ->setTransactions(array($transaction));
-
-            $request = clone $payment;
-
-            try {
-                $payment->create($apiContext);
-            } catch (Exception $ex) {
-                ResultPrinter::printError("Created Payment Using PayPal. Please visit the URL to Approve.", "Payment", null, $request, $ex);
-                exit(1);
-            }
-            $approvalUrl = $payment->getApprovalLink();
-            ResultPrinter::printResult("Created Payment Using PayPal. Please visit the URL to Approve.", "Payment", "<a href='$approvalUrl' >$approvalUrl</a>", $request, $payment);
-            return $payment;
-
-
-
             $settings = $atts['settings'];
             if( isset( $atts['data'] ) ) {
                 $data = $atts['data'];
@@ -441,278 +540,134 @@ if(!class_exists('SUPER_PayPal')) :
                 }
             }
 
-            // @since 1.2.2 - first reset order entry data
-            SUPER_Forms()->session->set( '_super_paypal_entry_data', false );
-
             if( (isset($settings['paypal_checkout'])) && ($settings['paypal_checkout']=='true') ) {
 
-                // @since 1.2.2 - save the entry data to the order
-                SUPER_Forms()->session->set( '_super_paypal_entry_data', $data );
+                /*
+                // Create new payer and method
+                $payer = new Payer();
+                $payer->setPaymentMethod("paypal");
 
-                // No products defined to add to cart!
-                if( (!isset($settings['paypal_checkout_products'])) || (empty($settings['paypal_checkout_products'])) ) {
-                    $msg = __( 'You haven\'t defined what products should be added to the cart. Please <a href="' . get_admin_url() . 'admin.php?page=super_create_form&id=' . absint( $atts['post']['form_id'] ) . '">edit</a> your form settings and try again', 'super-forms' );
-                    SUPER_Common::output_error(
-                        $error = true,
-                        $msg = $msg,
-                        $redirect = null
-                    );
-                }
+                // Set redirect urls
+                $redirectUrls = new RedirectUrls();
+                $redirectUrls->setReturnUrl('http://localhost:3000/process.php')
+                  ->setCancelUrl('http://localhost:3000/cancel.php');
 
-                $products = array();
-                $paypal_checkout_products = explode( "\n", $settings['paypal_checkout_products'] );  
-                $new_paypal_checkout_products = $paypal_checkout_products;
-                foreach( $paypal_checkout_products as $k => $v ) {
-                    $product =  explode( "|", $v );
-                    if( isset( $product[0] ) ) $product_id_tag = trim($product[0], '{}');
-                    if( isset( $product[1] ) ) $product_quantity_tag = trim($product[1], '{}');
-                    if( isset( $product[2] ) ) $product_variation_id_tag = trim($product[2], '{}');
-                    if( isset( $product[3] ) ) $product_price_tag = trim($product[3], '{}');
+                /*
+                $baseUrl = getBaseUrl();
+                $redirectUrls = new RedirectUrls();
+                $redirectUrls->setReturnUrl("$baseUrl/ExecutePayment.php?success=true")
+                    ->setCancelUrl("$baseUrl/ExecutePayment.php?success=false");
+                */
 
-                    $looped = array();
-                    $i=2;
-                    while( isset( $data[$product_id_tag . '_' . ($i)]) ) {
-                        if(!in_array($i, $looped)){
-                            $new_line = '';
-                            if( $product[0][0]=='{' ) { $new_line .= '{' . $product_id_tag . '_' . $i . '}'; }else{ $new_line .= $product[0]; }
-                            if( $product[1][0]=='{' ) { $new_line .= '|{' . $product_quantity_tag . '_' . $i . '}'; }else{ $new_line .= '|' . $product[1]; }
-                            if( $product[2][0]=='{' ) { $new_line .= '|{' . $product_variation_id_tag . '_' . $i . '}'; }else{ $new_line .= '|' . $product[2]; }
-                            if( $product[3][0]=='{' ) { $new_line .= '|{' . $product_price_tag . '_' . $i . '}'; }else{ $new_line .= '|' . $product[3]; }
-                            $new_paypal_checkout_products[] = $new_line;
-                            $looped[$i] = $i;
-                            $i++;
-                        }else{
-                            break;
-                        }
-                    }
+                /*
+                $item1 = new Item();
+                $item1->setName('Ground Coffee 40 oz')
+                    ->setCurrency('USD')
+                    ->setQuantity(1)
+                    ->setSku("123123") // Similar to `item_number` in Classic API
+                    ->setPrice(7.5);
 
-                    $i=2;
-                    while( isset( $data[$product_quantity_tag . '_' . ($i)]) ) {
-                        if(!in_array($i, $looped)){
-                            $new_line = '';
-                            if( $product[0][0]=='{' ) { $new_line .= '{' . $product_id_tag . '_' . $i . '}'; }else{ $new_line .= $product[0]; }
-                            if( $product[1][0]=='{' ) { $new_line .= '|{' . $product_quantity_tag . '_' . $i . '}'; }else{ $new_line .= '|' . $product[1]; }
-                            if( $product[2][0]=='{' ) { $new_line .= '|{' . $product_variation_id_tag . '_' . $i . '}'; }else{ $new_line .= '|' . $product[2]; }
-                            if( $product[3][0]=='{' ) { $new_line .= '|{' . $product_price_tag . '_' . $i . '}'; }else{ $new_line .= '|' . $product[3]; }
-                            $new_paypal_checkout_products[] = $new_line;
-                            $looped[$i] = $i;
-                            $i++;
-                        }else{
-                            break;
-                        }
-                    }
+                $item2 = new Item();
+                $item2->setName('Granola bars')
+                    ->setCurrency('USD')
+                    ->setQuantity(5)
+                    ->setSku("321321") // Similar to `item_number` in Classic API
+                    ->setPrice(2);
 
-                    $i=2;
-                    while( isset( $data[$product_variation_id_tag . '_' . ($i)]) ) {
-                        if(!in_array($i, $looped)){
-                            $new_line = '';
-                            if( $product[0][0]=='{' ) { $new_line .= '{' . $product_id_tag . '_' . $i . '}'; }else{ $new_line .= $product[0]; }
-                            if( $product[1][0]=='{' ) { $new_line .= '|{' . $product_quantity_tag . '_' . $i . '}'; }else{ $new_line .= '|' . $product[1]; }
-                            if( $product[2][0]=='{' ) { $new_line .= '|{' . $product_variation_id_tag . '_' . $i . '}'; }else{ $new_line .= '|' . $product[2]; }
-                            if( $product[3][0]=='{' ) { $new_line .= '|{' . $product_price_tag . '_' . $i . '}'; }else{ $new_line .= '|' . $product[3]; }
-                            $new_paypal_checkout_products[] = $new_line;
-                            $looped[$i] = $i;
-                            $i++;
-                        }else{
-                            break;
-                        }
-                    }
-
-                    $i=2;
-                    while( isset( $data[$product_price_tag . '_' . ($i)]) ) {
-                        if(!in_array($i, $looped)){
-                            $new_line = '';
-                            if( $product[0][0]=='{' ) { $new_line .= '{' . $product_id_tag . '_' . $i . '}'; }else{ $new_line .= $product[0]; }
-                            if( $product[1][0]=='{' ) { $new_line .= '|{' . $product_quantity_tag . '_' . $i . '}'; }else{ $new_line .= '|' . $product[1]; }
-                            if( $product[2][0]=='{' ) { $new_line .= '|{' . $product_variation_id_tag . '_' . $i . '}'; }else{ $new_line .= '|' . $product[2]; }
-                            if( $product[3][0]=='{' ) { $new_line .= '|{' . $product_price_tag . '_' . $i . '}'; }else{ $new_line .= '|' . $product[3]; }
-                            $new_paypal_checkout_products[] = $new_line;
-                            $looped[$i] = $i;
-                            $i++;
-                        }else{
-                            break;
-                        }
-                    }
-                }
-
-                foreach( $new_paypal_checkout_products as $k => $v ) {
-                    $product =  explode( "|", $v );
-                    $product_id = 0;
-                    $product_quantity = 0;
-                    $product_variation_id = '';
-                    $product_price = '';
-                    if( isset( $product[0] ) ) $product_id = SUPER_Common::email_tags( $product[0], $data, $settings );
-                    if( isset( $product[1] ) ) $product_quantity = SUPER_Common::email_tags( $product[1], $data, $settings );
-                    if( isset( $product[2] ) ) $product_variation_id = SUPER_Common::email_tags( $product[2], $data, $settings );
-                    if( isset( $product[3] ) ) $product_price = SUPER_Common::email_tags( $product[3], $data, $settings );
-                    $product_quantity = absint($product_quantity);
-                    if( $product_quantity>0 ) {
-                        $products[] = array(
-                            'id' => absint($product_id),
-                            'quantity' => absint($product_quantity),
-                            'variation_id' => absint($product_variation_id),
-                            'price' => $product_price,
-                        );
-                    }
-                }
-
-                global $paypal;
-
-                // Empty the cart
-                if( (isset($settings['paypal_checkout_empty_cart'])) && ($settings['paypal_checkout_empty_cart']=='true') ) {
-                    $paypal->cart->empty_cart();
-                }
-
-                // Remove any coupons.
-                if( (isset($settings['paypal_checkout_remove_coupons'])) && ($settings['paypal_checkout_remove_coupons']=='true') ) {
-                    $paypal->cart->remove_coupons();
-                }
-
-                // Add discount
-                if( (isset($settings['paypal_checkout_coupon'])) && ($settings['paypal_checkout_coupon']!='') ) {
-                    $paypal->cart->add_discount($settings['paypal_checkout_coupon']);
-                }
-
-                // Delete any fees
-                if( (isset($settings['paypal_checkout_remove_fees'])) && ($settings['paypal_checkout_remove_fees']=='true') ) {
-                    $paypal->session->set( 'fees', array() );
-                    SUPER_Forms()->session->set( '_super_wc_fee', false );
-                }
-
-                // Add fee
-                if( (isset($settings['paypal_checkout_fees'])) && ($settings['paypal_checkout_fees']!='') ) {
-                    $fees = array();
-                    $paypal_checkout_fees = explode( "\n", $settings['paypal_checkout_fees'] );  
-                    foreach( $paypal_checkout_fees as $k => $v ) {
-                        $fee =  explode( "|", $v );
-                        $name = '';
-                        $amount = 0;
-                        $taxable = false;
-                        $tax_class = '';
-                        if( isset( $fee[0] ) ) $name = SUPER_Common::email_tags( $fee[0], $data, $settings );
-                        if( isset( $fee[1] ) ) $amount = SUPER_Common::email_tags( $fee[1], $data, $settings );
-                        if( isset( $fee[2] ) ) $taxable = SUPER_Common::email_tags( $fee[2], $data, $settings );
-                        if( isset( $fee[3] ) ) $tax_class = SUPER_Common::email_tags( $fee[3], $data, $settings );
-                        if( $amount>0 ) {
-                            $fees[] = array(
-                                'name' => $name,            // ( string ) required – Unique name for the fee. Multiple fees of the same name cannot be added.
-                                'amount' => $amount,        // ( float ) required – Fee amount.
-                                'taxable' => $taxable,      // ( bool ) optional – (default: false) Is the fee taxable?
-                                'tax_class' => $tax_class,  // ( string ) optional – (default: '') The tax class for the fee if taxable. A blank string is standard tax class.
-                            );
-                        }
-                    }
-                    SUPER_Forms()->session->set( '_super_wc_fee', $fees );
-                }
-
-                // @since 1.2.2 - Add custom checkout fields
-                if( (isset($settings['paypal_checkout_fields'])) && ($settings['paypal_checkout_fields']!='') ) {
-                    $fields = array();
-                    $paypal_checkout_fields = explode( "\n", $settings['paypal_checkout_fields'] );  
-                    foreach( $paypal_checkout_fields as $k => $v ) {
-                        $field =  explode( "|", $v );
-                        if( !isset( $field[0] ) ) {
-                            continue; 
-                        }
-                        $name = '';
-                        $value = '';
-                        $label = '';
-                        $placeholder = '';
-                        $type = 'text';
-                        $section = 'billing';
-                        $required = 'true';
-                        $clear = 'true';
-                        $class = 'super-checkout-custom';
-                        $label_class = 'super-checkout-custom-label';
-                        $options = 'red,Red;blue,Blue;green,Green';
-                        if( isset( $field[0] ) ) $name = SUPER_Common::email_tags( $field[0], $data, $settings );
-                        if( isset( $field[1] ) ) $value = SUPER_Common::email_tags( $field[1], $data, $settings );
-                        if( isset( $field[2] ) ) $label = SUPER_Common::email_tags( $field[2], $data, $settings );
-                        if( isset( $field[3] ) ) $placeholder = SUPER_Common::email_tags( $field[3], $data, $settings );
-                        if( isset( $field[4] ) ) $type = SUPER_Common::email_tags( $field[4], $data, $settings );
-                        if( isset( $field[5] ) ) $section = SUPER_Common::email_tags( $field[5], $data, $settings );
-                        if( isset( $field[6] ) ) $required = SUPER_Common::email_tags( $field[6], $data, $settings );
-                        if( isset( $field[7] ) ) $clear = SUPER_Common::email_tags( $field[7], $data, $settings );
-                        if( isset( $field[8] ) ) $class = SUPER_Common::email_tags( $field[8], $data, $settings );
-                        if( isset( $field[9] ) ) $label_class = SUPER_Common::email_tags( $field[9], $data, $settings );
-                        if( isset( $field[10] ) ) $options = SUPER_Common::email_tags( $field[10], $data, $settings );
+                $itemList = new ItemList();
+                $itemList->setItems(array($item1, $item2));
 
 
-                        // Only add the field if the field name was visible in the form itself
-                        if( (isset($settings['paypal_checkout_fields_skip_empty'])) && ($settings['paypal_checkout_fields_skip_empty']=='true') ) {
-                            if( !isset($data[$name]) ) {
-                                continue;
-                            }
-                        }
+                // Set payment amount
+                $amount = new Amount();
+                $amount->setCurrency("USD")
+                  ->setTotal(10);
 
-                        $fields[] = array(
-                            'name' => $name,
-                            'value' => $value,
-                            'label' => $label,
-                            'placeholder' => $placeholder,
-                            'type' => $type,
-                            'section' => $section,
-                            'required' => $required,
-                            'clear' => $clear,
-                            'class' => $class,
-                            'label_class' => $label_class,
-                            'options' => $options
-                        );
-                    }
-                    SUPER_Forms()->session->set( '_super_wc_custom_fields', $fields );
+                /*
+                $details = new Details();
+                $details->setShipping(1.2)
+                    ->setTax(1.3)
+                    ->setSubtotal(17.50);
+                
+                $amount = new Amount();
+                $amount->setCurrency("USD")
+                    ->setTotal(20)
+                    ->setDetails($details);
+                */
+
+                /*
+                // Set transaction object
+                $transaction = new Transaction();
+                $transaction->setAmount($amount)
+                  ->setDescription("Payment description");
+
+                /*
+                $transaction = new Transaction();
+                $transaction->setAmount($amount)
+                    ->setItemList($itemList)
+                    ->setDescription("Payment description")
+                    ->setInvoiceNumber(uniqid());
+                */
+
+                /*
+                // Create the full payment object
+                $payment = new Payment();
+                $payment->setIntent('sale')
+                  ->setPayer($payer)
+                  ->setRedirectUrls($redirectUrls)
+                  ->setTransactions(array($transaction));
+
+                // Create payment with valid API context
+                try {
+                    $payment->create($apiContext);
+
+                    // Get PayPal redirect URL and redirect user
+                    $approvalUrl = $payment->getApprovalLink();
+
+                    // REDIRECT USER TO $approvalUrl
+                } catch (PayPal\Exception\PayPalConnectionException $ex) {
+                    echo $ex->getCode();
+                    echo $ex->getData();
+                    die($ex);
+                } catch (Exception $ex) {
+                    die($ex);
                 }
 
 
-                global $wpdb;
+                // Complete the payment
+                // After the customer confirms the payment information, he or she is redirected to the URL that
+                // was specified in the payment information object, set in the first step. In the query string will
+                // also be two parameters, PayerID and paymentId. These parameters are confirmation objects
+                // used to complete the payment.
+                /*
+                use PayPal\Api\Amount;
+                use PayPal\Api\Details;
+                use PayPal\Api\ExecutePayment;
+                use PayPal\Api\Payment;
+                use PayPal\Api\PaymentExecution;
+                use PayPal\Api\Transaction;
 
-                // Now add the product(s) to the cart
-                foreach( $products as $k => $v ) {
+                // Get payment object by passing paymentId
+                $paymentId = $_GET['paymentId'];
+                $payment = Payment::get($paymentId, $apiContext);
+                $payerId = $_GET['PayerID'];
 
-                    if( class_exists('WC_Name_Your_Price_Helpers') ) {
-                        $posted_nyp_field = 'nyp' . apply_filters( 'nyp_field_prefix', '', $v['id'] );
-                        $value = trim( str_replace( '.', get_option( 'paypal_price_decimal_sep' ), $v['price'] ) );
-                        $_REQUEST[$posted_nyp_field] = $value;
-                    }
+                // Execute payment with payer id
+                $execution = new PaymentExecution();
+                $execution->setPayerId($payerId);
 
-                    $new_attributes = array();
-                    if( $v['variation_id']!=0 ) {
-                        $product = wc_get_product( $v['id'] );
-                        if( $product->product_type=='variable' ) {
-                            $attributes = $product->get_variation_attributes();
-                            foreach( $attributes as $ak => $av ) {
-                                $new_attributes[$ak] = get_post_meta( $v['variation_id'], 'attribute_' . $ak, true );
-                            }
-                        }
-                    }
-                    $paypal->cart->add_to_cart(
-                        $v['id'],               // ( int ) optional – contains the id of the product to add to the cart
-                        $v['quantity'],         // ( int ) optional default: 1 – contains the quantity of the item to add
-                        $v['variation_id'],     // ( int ) optional –
-                        $new_attributes         // ( array ) optional – attribute values
-                                                // ( array ) optional – extra cart item data we want to pass into the item
-                    );
-
+                try {
+                // Execute payment
+                $result = $payment->execute($execution, $apiContext);
+                    var_dump($result);
+                } catch (PayPal\Exception\PayPalConnectionException $ex) {
+                    echo $ex->getCode();
+                    echo $ex->getData();
+                    die($ex);
+                } catch (Exception $ex) {
+                    die($ex);
                 }
-
-                // Redirect to cart / checkout page
-                if( isset($settings['paypal_redirect']) ) {
-                    $paypal->session->set( '_super_form_data', $data ); // @since 1.2.0 - save data to session for billing fields
-                    $redirect = null;
-                    if( $settings['paypal_redirect']=='checkout' ) {
-                        $redirect = $paypal->cart->get_checkout_url();
-                    }
-                    if( $settings['paypal_redirect']=='cart' ) {
-                        $redirect = $paypal->cart->get_cart_url();
-                    }
-                    if( $redirect!=null ) {
-                        SUPER_Common::output_error(
-                            $error = false,
-                            $msg = '',
-                            $redirect = $redirect
-                        );
-                    }
-                }
-
+                */
             }
 
         }
