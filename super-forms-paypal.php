@@ -1,14 +1,14 @@
 <?php
 /**
- * Super Forms - PayPal
+ * Super Forms - PayPal Checkout
  *
- * @package   Super Forms - PayPal
+ * @package   Super Forms - PayPal Checkout
  * @author    feeling4design
  * @link      http://codecanyon.net/item/super-forms-drag-drop-form-builder/13979866
  * @copyright 2015 by feeling4design
  *
  * @wordpress-plugin
- * Plugin Name: Super Forms - PayPal
+ * Plugin Name: Super Forms - PayPal Checkout
  * Plugin URI:  http://codecanyon.net/item/super-forms-drag-drop-form-builder/13979866
  * Description: Checkout with PayPal after form submission. Charge users for registering or posting content.
  * Version:     1.0.0
@@ -17,7 +17,7 @@
 */
 
 if ( ! defined( 'ABSPATH' ) ) {
-	exit; // Exit if accessed directly
+    exit; // Exit if accessed directly
 }
 
 if(!class_exists('SUPER_PayPal')) :
@@ -34,7 +34,7 @@ if(!class_exists('SUPER_PayPal')) :
         /**
          * @var string
          *
-         *	@since		1.0.0
+         *  @since      1.0.0
         */
         public $version = '1.0.0';
 
@@ -44,14 +44,14 @@ if(!class_exists('SUPER_PayPal')) :
          *
          *  @since      1.1.0
         */
-        public $add_on_slug = 'paypal';
-        public $add_on_name = 'PayPal';
+        public $add_on_slug = 'paypal_checkout';
+        public $add_on_name = 'PayPal Checkout';
 
 
         /**
          * @var SUPER_PayPal The single instance of the class
          *
-         *	@since		1.0.0
+         *  @since      1.0.0
         */
         protected static $_instance = null;
 
@@ -65,7 +65,7 @@ if(!class_exists('SUPER_PayPal')) :
          * @see SUPER_PayPal()
          * @return SUPER_PayPal - Main instance
          *
-         *	@since		1.0.0
+         *  @since      1.0.0
         */
         public static function instance() {
             if(is_null( self::$_instance)){
@@ -78,7 +78,7 @@ if(!class_exists('SUPER_PayPal')) :
         /**
          * SUPER_PayPal Constructor.
          *
-         *	@since		1.0.0
+         *  @since      1.0.0
         */
         public function __construct(){
             $this->init_hooks();
@@ -92,7 +92,7 @@ if(!class_exists('SUPER_PayPal')) :
          * @param  string $name
          * @param  string|bool $value
          *
-         *	@since		1.0.0
+         *  @since      1.0.0
         */
         private function define($name, $value){
             if(!defined($name)){
@@ -107,7 +107,7 @@ if(!class_exists('SUPER_PayPal')) :
          * string $type ajax, frontend or admin
          * @return bool
          *
-         *	@since		1.0.0
+         *  @since      1.0.0
         */
         private function is_request($type){
             switch ($type){
@@ -126,7 +126,7 @@ if(!class_exists('SUPER_PayPal')) :
         /**
          * Hook into actions and filters
          *
-         *	@since		1.0.0
+         *  @since      1.0.0
         */
         private function init_hooks() {
 
@@ -138,32 +138,12 @@ if(!class_exists('SUPER_PayPal')) :
             // Filters since 1.0.0
             add_filter( 'super_after_contact_entry_data_filter', array( $this, 'add_entry_order_link' ), 10, 2 );
 
-            // Filters since 1.2.0
-            add_filter( 'super_countries_list_filter', array( $this, 'return_wc_countries' ), 10, 2 );
-
             // Actions since 1.0.0
             add_action( 'super_front_end_posting_after_insert_post_action', array( $this, 'save_wc_order_post_session_data' ) );
             add_action( 'super_after_wp_insert_user_action', array( $this, 'save_wc_order_signup_session_data' ) );
             add_action( 'paypal_checkout_update_order_meta', array( $this, 'update_order_meta' ), 10, 1 );
-            add_action( 'paypal_checkout_order_processed', array( $this, 'paypal_checkout_order_processed' ) );
-
-            // @deprecated since 1.0.2
-            //add_action( 'paypal_payment_complete_order_status', array( $this, 'payment_complete_order_status' ) );
-            
-            add_action( 'paypal_order_status_completed', array( $this, 'order_status_completed' ) );
-            add_action( 'paypal_order_status_changed', array( $this, 'order_status_changed' ), 1, 3 );
-            add_action( 'super_after_saving_contact_entry_action', array( $this, 'set_contact_entry_order_id_session' ), 10, 3 );
 
             if ( $this->is_request( 'frontend' ) ) {
-
-                // Actions since 1.0.0
-                add_action( 'paypal_cart_calculate_fees', array( $this, 'additional_shipping_costs' ), 5 );
-
-                // Filters since 1.2.0
-                add_filter( 'paypal_checkout_get_value', array( $this, 'populate_billing_field_values' ), 10, 2 );
-
-                // Filters since 1.2.2
-                add_filter( 'paypal_checkout_fields' , array( $this, 'custom_override_checkout_fields' ) );
 
             }
             
@@ -178,17 +158,12 @@ if(!class_exists('SUPER_PayPal')) :
                 // Actions since 1.1.0
                 add_action( 'init', array( $this, 'update_plugin' ) );
 
-                // Actions since 1.2.2        
-                add_action( 'paypal_admin_order_data_after_shipping_address', array( $this, 'checkout_field_display_admin_order_meta' ), 10, 1 );
-
                 // Actions since 1.3.0
                 add_action( 'all_admin_notices', array( $this, 'display_activation_msg' ) );
 
             }
             
             if ( $this->is_request( 'ajax' ) ) {
-
-                // Filters since 1.0.0
 
                 // Actions since 1.0.0
                 add_action( 'super_before_email_success_msg_action', array( $this, 'before_email_success_msg' ) );
@@ -211,54 +186,6 @@ if(!class_exists('SUPER_PayPal')) :
                     echo sprintf( __( '%sPlease note:%s You are missing out on important updates for %s! Please %sactivate your copy%s to receive automatic updates.', 'super_forms' ), '<strong>', '</strong>', 'Super Forms - ' . $this->add_on_name, '<a href="' . admin_url() . 'admin.php?page=super_settings#activate">', '</a>' );
                     echo '</p>';
                 echo '</div>';
-            }
-        }
-
-        
-        /**
-         * Add additional checkout fields
-         * 
-         * @since       1.2.2
-        */
-        function custom_override_checkout_fields( $fields ) {
-            $custom_fields = SUPER_Forms()->session->get( '_super_wc_custom_fields' );
-            if( is_array($custom_fields) ) {
-                foreach( $custom_fields as $k => $v ) {
-                    $fields[$v['section']][$v['name']] = array(
-                        'label' => $v['label'],
-                        'placeholder' => $v['placeholder'],
-                        'type' => $v['type'],
-                        'required' => ($v['required']=='true' ? true : false),
-                        'clear' => ($v['clear']=='true' ? true : false),
-                        'class' => array( $v['class'] ),
-                        'label_class' => array( $v['label_class'] )
-                    );
-                    if( $v['type']=='select' ) {
-                        $array = array();
-                        $options =  explode( ";", $v['options'] );
-                        foreach( $options as $ok => $ov ) {
-                            $values = explode( ",", $ov );
-                            $value = $values[0];
-                            $label = $values[1];
-                            $array[$value] = $label;
-                        }
-                        $fields[$v['section']][$v['name']]['options'] = $array;
-                    }
-                }
-            }
-            return $fields;
-        }
-
-
-        /**
-         * Add additional shipping costs
-         * 
-         * @since       1.2.2
-        */
-        function checkout_field_display_admin_order_meta( $order ){
-            $custom_fields = get_post_meta( $order->get_id(), '_super_wc_custom_fields', true );
-            foreach( $custom_fields as $k => $v ) {
-                echo '<p><strong>' . $v['label'] . ':</strong> ' . get_post_meta( $order->get_id(), $v['name'], true ) . '</p>';
             }
         }
 
@@ -327,95 +254,6 @@ if(!class_exists('SUPER_PayPal')) :
 
 
         /**
-         * Return WC countries list for billing_country and shipping_country only
-         *
-         *  @since      1.2.0
-        */
-        public function return_wc_countries($countries, $data) {
-            if( (class_exists('WC_Countries')) && (isset($data['settings']['paypal_checkout'])) && ($data['settings']['paypal_checkout']=='true') && ( ($data['name']=='billing_country') || ($data['name']=='shipping_country') ) ) {
-                $countries_obj = new WC_Countries();
-                $countries = $countries_obj->__get('countries');
-                return $countries;
-            }
-            return $countries;
-        }
-
-        /**
-         * Auto popuplate field with form data value
-         * 
-         * @since       1.2.0
-        */
-        public static function populate_billing_field_values( $value, $input ) {
-            global $paypal;
-            $v = $paypal->session->get('_super_form_data', array() );
-            if( (isset($v[$input])) && (isset($v[$input]['value'])) ) return $v[$input]['value'];
-            $input = str_replace('billing_', '', $input);
-            if( (isset($v[$input])) && (isset($v[$input]['value'])) ) return $v[$input]['value'];
-            if($input=='address_1'){
-                if( (isset($v['address'])) && (isset($v['address']['value'])) ) return $v['address']['value'];
-            }
-            return $value;
-        }
-        
-
-        /**
-         * Change required fields on checkout page (for future reference if we will implement this feature anytime soon)
-         * 
-         * @since       1.2.0
-        */     
-        /*
-
-        add_filter( 'paypal_checkout_fields' , 'f4d_remove_checkout_fields' );
-        function f4d_remove_checkout_fields( $fields ) {
-            $billing_fields = array(
-                'first_name' => array( 'required'=>false, 'validate'=>false ),
-                'last_name' => array( 'required'=>false, 'validate'=>false ),
-                'company' => array( 'required'=>false, 'validate'=>false ),
-                'email' => array( 'required'=>false, 'validate'=>false ),
-                'phone' => array( 'required'=>false, 'validate'=>false ),
-                'country' => array( 'required'=>false, 'validate'=>false ),
-                'address_1' => array( 'required'=>false, 'validate'=>false ),
-                'address_2' => array( 'required'=>false, 'validate'=>false ),
-                'city' => array( 'required'=>false, 'validate'=>false ),
-                'state' => array( 'required'=>false, 'validate'=>false ),
-                'postcode' => array( 'required'=>false, 'validate'=>false )
-            );
-            foreach( $billing_fields as $k => $v ) {
-                unset($fields['billing']['billing_' . $k]);
-            }
-            unset($fields['order']['order_comments']);
-            unset($fields['account']['account_username']);
-            unset($fields['account']['account_password']);
-            unset($fields['account']['account_password-2']); 
-            return $fields;
-        }
-
-        add_filter( 'paypal_billing_fields', array( $this, 'wc_required_fields' ), 10, 1 );
-        public static function wc_required_fields( $address_fields ) {
-            $fields = array(
-                'first_name' => array( 'required'=>false, 'validate'=>false ),
-                'last_name' => array( 'required'=>false, 'validate'=>false ),
-                'company' => array( 'required'=>false, 'validate'=>false ),
-                'email' => array( 'required'=>false, 'validate'=>false ),
-                'phone' => array( 'required'=>false, 'validate'=>false ),
-                'country' => array( 'required'=>false, 'validate'=>false ),
-                'address_1' => array( 'required'=>false, 'validate'=>false ),
-                'address_2' => array( 'required'=>false, 'validate'=>false ),
-                'city' => array( 'required'=>false, 'validate'=>false ),
-                'state' => array( 'required'=>false, 'validate'=>false ),
-                'postcode' => array( 'required'=>false, 'validate'=>false )
-            );
-            foreach($fields as $k => $v){
-                $address_fields['billing_'.$k]['required'] = $v['required'];
-                $address_fields['billing_'.$k]['validate'] = $v['validate'];
-                //unset($address_fields['billing_phone']['validate']);
-            }
-            return $address_fields;
-        }
-        */
-
-
-        /**
          * Add the WC Order link to the entry info/data page
          * 
          * @since       1.0.0
@@ -435,47 +273,7 @@ if(!class_exists('SUPER_PayPal')) :
 
 
         /**
-         * Save contact entry ID to session
-         * 
-         * @since       1.0.0
-        */
-        function set_contact_entry_order_id_session( $data ) {
-            if ( class_exists( 'PayPal' ) ) {
-                $post_type = get_post_type( $data['entry_id'] );
-
-                // Check if post_type is super_contact_entry 
-                global $paypal;
-                if( $post_type=='super_contact_entry' ) {
-                    $paypal->session->set( '_super_entry_id', array( 'entry_id'=>$data['entry_id'] ) );
-                }else{
-                    $paypal->session->set( '_super_entry_id', array() );
-                }
-            }
-        }
-
-
-        /**
-         * Add additional shipping costs
-         * 
-         * @since       1.0.0
-        */
-        function additional_shipping_costs( ) {
-            global $paypal;
-            $_super_wc_fee = SUPER_Forms()->session->get( '_super_wc_fee' );
-            if( $_super_wc_fee!=false ) {
-                foreach( $_super_wc_fee as $k => $v ) {
-                    if( $v['amount']>0 ) {
-                        $paypal->cart->add_fee( $v['name'], $v['amount'], false, '' );
-                    }else{
-                        $paypal->cart->add_fee( $v['name'], $v['amount'], false, '' );
-                    }
-                }
-            }
-        }
-
-
-        /**
-         * If Front-end posting add-on is activated and being used retrieve the inserted Post ID and save it to the WC Order
+         * If Front-end posting add-on is activated and being used retrieve the inserted Post ID and save it to the PayPal Order
          *
          *  @since      1.0.0
         */
@@ -499,7 +297,7 @@ if(!class_exists('SUPER_PayPal')) :
 
 
         /**
-         * If Register & Login add-on is activated and being used retrieve the created User ID and save it to the WC Order
+         * If Register & Login add-on is activated and being used retrieve the created User ID and save it to the PayPal Order
          *
          *  @since      1.0.0
         */
@@ -539,8 +337,8 @@ if(!class_exists('SUPER_PayPal')) :
             }
             
             // @since 1.2.2 - save entry data to the order
-            $data = SUPER_Forms()->session->get( '_super_wc_entry_data' );
-            update_post_meta( $order_id, '_super_wc_entry_data', $data );
+            $data = SUPER_Forms()->session->get( '_super_paypal_entry_data' );
+            update_post_meta( $order_id, '_super_paypal_entry_data', $data );
 
             global $paypal;
             $_super_wc_post = $paypal->session->get( '_super_wc_post', array() );
@@ -556,64 +354,82 @@ if(!class_exists('SUPER_PayPal')) :
 
 
         /**
-         * After order processed
-         * 
-         * @since       1.0.0
-        */
-        public function paypal_checkout_order_processed( $order_id ) {
-            // This could possibly be used to notify the user of an order being processed.
-            // We might want to add an option to send an extra email function after payment processed etc.
-        }
-
-
-        /**
-         * After complete order status
-         * 
-         * @since       1.0.0
-        */
-        public function payment_complete_order_status( $order_id ) {
-            return 'completed';
-        }
-
-
-        /**
-         * After order completed
-         * 
-         * @since       1.0.0
-        */
-        public function order_status_completed( $order_id ) {
-            // What we could do here we do within the "order_status_changed()" function below:
-        }
-
-
-        /**
-         * After order status changed
-         * 
-         * @since       1.0.0
-        */
-        public function order_status_changed( $order_id, $old_status, $new_status ) {
-            if( $new_status=='completed' ) {
-                $_super_wc_post = get_post_meta( $order_id, '_super_wc_post', true );
-                if ( !empty( $_super_wc_post ) ) { // @since 1.0.2 - check if not empty
-                    $my_post = array(
-                        'ID' => $_super_wc_post['post_id'],
-                        'post_status' => $_super_wc_post['status'],
-                    );
-                    wp_update_post( $my_post );
-
-                    $_super_wc_signup = get_post_meta( $order_id, '_super_wc_signup', true );
-                    update_user_meta( $_super_wc_signup['user_id'], 'super_user_login_status', $_super_wc_signup['status'] );
-                }
-            }
-        }
-
-
-        /**
          * Hook into before sending email and check if we need to create or update a post or taxonomy
          *
          *  @since      1.0.0
         */
         public static function before_email_success_msg( $atts ) {
+
+            require __DIR__ . '/../bootstrap.php';
+            use PayPal\Api\Amount;
+            use PayPal\Api\Details;
+            use PayPal\Api\Item;
+            use PayPal\Api\ItemList;
+            use PayPal\Api\Payer;
+            use PayPal\Api\Payment;
+            use PayPal\Api\RedirectUrls;
+            use PayPal\Api\Transaction;
+
+            $payer = new Payer();
+            $payer->setPaymentMethod("paypal");
+
+            $item1 = new Item();
+            $item1->setName('Ground Coffee 40 oz')
+                ->setCurrency('USD')
+                ->setQuantity(1)
+                ->setSku("123123") // Similar to `item_number` in Classic API
+                ->setPrice(7.5);
+            $item2 = new Item();
+            $item2->setName('Granola bars')
+                ->setCurrency('USD')
+                ->setQuantity(5)
+                ->setSku("321321") // Similar to `item_number` in Classic API
+                ->setPrice(2);
+
+            $itemList = new ItemList();
+            $itemList->setItems(array($item1, $item2));
+
+            $details = new Details();
+            $details->setShipping(1.2)
+                ->setTax(1.3)
+                ->setSubtotal(17.50);
+
+            $amount = new Amount();
+            $amount->setCurrency("USD")
+                ->setTotal(20)
+                ->setDetails($details);
+
+            $transaction = new Transaction();
+            $transaction->setAmount($amount)
+                ->setItemList($itemList)
+                ->setDescription("Payment description")
+                ->setInvoiceNumber(uniqid());
+
+            $baseUrl = getBaseUrl();
+            $redirectUrls = new RedirectUrls();
+            $redirectUrls->setReturnUrl("$baseUrl/ExecutePayment.php?success=true")
+                ->setCancelUrl("$baseUrl/ExecutePayment.php?success=false");
+
+            $payment = new Payment();
+            $payment->setIntent("sale")
+                ->setPayer($payer)
+                ->setRedirectUrls($redirectUrls)
+                ->setTransactions(array($transaction));
+
+            $request = clone $payment;
+
+            try {
+                $payment->create($apiContext);
+            } catch (Exception $ex) {
+                ResultPrinter::printError("Created Payment Using PayPal. Please visit the URL to Approve.", "Payment", null, $request, $ex);
+                exit(1);
+            }
+            $approvalUrl = $payment->getApprovalLink();
+            ResultPrinter::printResult("Created Payment Using PayPal. Please visit the URL to Approve.", "Payment", "<a href='$approvalUrl' >$approvalUrl</a>", $request, $payment);
+            return $payment;
+
+
+
             $settings = $atts['settings'];
             if( isset( $atts['data'] ) ) {
                 $data = $atts['data'];
@@ -626,12 +442,12 @@ if(!class_exists('SUPER_PayPal')) :
             }
 
             // @since 1.2.2 - first reset order entry data
-            SUPER_Forms()->session->set( '_super_wc_entry_data', false );
+            SUPER_Forms()->session->set( '_super_paypal_entry_data', false );
 
             if( (isset($settings['paypal_checkout'])) && ($settings['paypal_checkout']=='true') ) {
 
                 // @since 1.2.2 - save the entry data to the order
-                SUPER_Forms()->session->set( '_super_wc_entry_data', $data );
+                SUPER_Forms()->session->set( '_super_paypal_entry_data', $data );
 
                 // No products defined to add to cart!
                 if( (!isset($settings['paypal_checkout_products'])) || (empty($settings['paypal_checkout_products'])) ) {
@@ -910,15 +726,15 @@ if(!class_exists('SUPER_PayPal')) :
         public static function add_settings( $array, $settings ) {
             $array['paypal_checkout'] = array(        
                 'hidden' => 'settings',
-                'name' => __( 'PayPal', 'super-forms' ),
-                'label' => __( 'PayPal', 'super-forms' ),
+                'name' => __( 'PayPal Checkout', 'super-forms' ),
+                'label' => __( 'PayPal Checkout', 'super-forms' ),
                 'fields' => array(
                     'paypal_checkout' => array(
                         'default' => SUPER_Settings::get_value( 0, 'paypal_checkout', $settings['settings'], '' ),
                         'type' => 'checkbox',
                         'filter'=>true,
                         'values' => array(
-                            'true' => __( 'Enable PayPal', 'super-forms' ),
+                            'true' => __( 'Enable PayPal Checkout', 'super-forms' ),
                         ),
                     ),               
                     'paypal_checkout_empty_cart' => array(
