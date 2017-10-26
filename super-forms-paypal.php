@@ -47,7 +47,7 @@ if(!class_exists('SUPER_PayPal')) :
         public $add_on_slug = 'paypal_checkout';
         public $add_on_name = 'PayPal Checkout';
 
-        public $currency_codes = array(
+        public static $currency_codes = array(
             'AUD' => array('symbol'=>'$', 'name'=>'Australian Dollar'),
             'BRL' => array('symbol'=>'R$', 'name'=>'Brazilian Real'),
             'CAD' => array('symbol'=>'$', 'name'=>'Canadian Dollar'),
@@ -55,9 +55,9 @@ if(!class_exists('SUPER_PayPal')) :
             'DKK' => array('symbol'=>'&#107;&#114;', 'name'=>'Danish Krone'),
             'EUR' => array('symbol'=>'&#128;', 'name'=>'Euro'),
             'HKD' => array('symbol'=>'&#20803;', 'name'=>'Hong Kong Dollar'),
-            'HUF' => array('symbol'=>'&#70;&#116;', 'name'=>'Hungarian Forint', 'decimal'=>false),
+            'HUF' => array('symbol'=>'&#70;&#116;', 'name'=>'Hungarian Forint', 'decimal'=>true),
             'ILS' => array('symbol'=>'&#8362;', 'name'=>'Israeli New Sheqel'),
-            'JPY' => array('symbol'=>'&#165;', 'name'=>'Japanese Yen', 'decimal'=>false),
+            'JPY' => array('symbol'=>'&#165;', 'name'=>'Japanese Yen', 'decimal'=>true),
             'MYR' => array('symbol'=>'&#82;&#77;', 'name'=>'Malaysian Ringgit'),
             'MXN' => array('symbol'=>'&#36;', 'name'=>'Mexican Peso'),
             'NOK' => array('symbol'=>'&#107;&#114;', 'name'=>'Norwegian Krone'),
@@ -69,7 +69,7 @@ if(!class_exists('SUPER_PayPal')) :
             'SGD' => array('symbol'=>'&#36;', 'name'=>'Singapore Dollar'),
             'SEK' => array('symbol'=>'&#107;&#114;', 'name'=>'Swedish Krona'),
             'CHF' => array('symbol'=>'&#67;&#72;&#70;', 'name'=>'Swiss Franc'),
-            'TWD' => array('symbol'=>'&#36;', 'name'=>'Taiwan New Dollar', 'decimal'=>false),
+            'TWD' => array('symbol'=>'&#36;', 'name'=>'Taiwan New Dollar', 'decimal'=>true),
             'THB' => array('symbol'=>'&#3647;', 'name'=>'Thai Baht'),
             'USD' => array('symbol'=>'$', 'name'=>'U.S. Dollar'),
         );
@@ -107,149 +107,6 @@ if(!class_exists('SUPER_PayPal')) :
          *  @since      1.0.0
         */
         public function __construct(){
-
-            $settings = array();
-            if(!isset($settings['paypal_mode'])) $settings['paypal_mode'] = 'sandbox';
-            if(!isset($settings['paypal_payment_type'])) $settings['paypal_payment_type'] = 'product_service';
-            if(!isset($settings['paypal_merchant_email'])) $settings['paypal_merchant_email'] = 'payments@feeling4design.nl';
-            if(!isset($settings['paypal_cancel_url'])) $settings['paypal_cancel_url'] = get_home_url();
-            if(!isset($settings['paypal_currency_code'])) $settings['paypal_currency_code'] = 'USD';
-            if(!isset($settings['paypal_items'])) $settings['paypal_items'] = '';
-
-            $entry_id = 1;
-            $form_id = 2;
-            $payment_type = 3;
-            $home_url = get_home_url(). "/";
-            if( strstr($home_url, '?') ) {
-                $return_url = $home_url . '&page=super_paypal_response&custom=' . $entry_id . '|' . $form_id . '|' . $payment_type;
-                $notify_url = $home_url . '&page=super_paypal_ipn';
-            }else{
-                $return_url = $home_url . '?page=super_paypal_response&custom=' . $entry_id . '|' . $form_id . '|' . $payment_type;
-                $notify_url = $home_url . '?page=super_paypal_ipn';
-            }
-
-
-            // _xclick                  - The button that the person clicked was a Buy Now button.
-            // _cart                    - For shopping cart purchases. The following variables specify the kind of shopping cart button that the person clicked:
-            //                              - add — Add to Cart buttons for the PayPal Shopping Cart
-            //                              - display — View Cart buttons for the PayPal Shopping Cart
-            //                              - upload — The Cart Upload command for third-party carts
-            // _xclick-subscriptions    - The button that the person clicked was a Subscribe button.
-            // _xclick-auto-billing     - The button that the person clicked was an Automatic Billing button.
-            // _xclick-payment-plan     - The button that the person clicked was an Installment Plan button.
-            // _donations               - The button that the person clicked was a Donate button.
-            // _s-xclick                - The button that the person clicked was protected from tampering by using encryption, or the button was saved in the merchant's PayPal account. PayPal determines which kind of button was clicked by decoding the encrypted code or by looking up the saved button in the merchant's account.
-
-
-            $cmd = '_xclick';
-            switch ($settings['paypal_payment_type']) {
-                case 'product_service':
-                    $cmd = '_xclick';
-                    break;
-                case 'donation':
-                    $cmd = '_donations';
-                    break;
-                case 'subscription':
-                    $cmd = '_xclick-subscriptions';
-                    break;
-            }
-            $cmd = '_cart';
-
-            $message = '';
-            $message .= '<form id="super_paypal_form" action="https://www.' . ($settings['paypal_mode']=='sandbox' ? 'sandbox.' : '') . 'paypal.com/cgi-bin/webscr" method="post">';
-            $message .= '<input type="hidden" name="cmd" value="' . $cmd . '">';
-            $message .= '<input type="hidden" name="charset" value="UTF-8">';
-            $message .= '<input type="hidden" name="business" value="' . esc_attr( $settings['paypal_merchant_email'] ) . '">';
-            $message .= '<input type="hidden" name="notify_url" value="' . esc_url($notify_url) . '">';
-            $message .= '<input type="hidden" name="return" value="' . esc_url($return_url) . '">';
-            $message .= '<input type="hidden" name="cancel_return" value="' . esc_url($settings['paypal_cancel_url']) . '">';
-            $message .= '<input type="hidden" name="currency_code" value="' . $settings['paypal_currency_code'] . '" />';
-
-            if( $cmd=='_xclick' ) {
-                $message .= '<input type="hidden" name="item_name" value="Some peanuts">';
-                $message .= '<input type="hidden" name="amount" value="10">';
-            }
-
-            if( $cmd=='_cart' ) {
-                $message .= '<input type="hidden" name="upload" value="1">';
-
-                $message .= '<input type="hidden" name="item_name_1" value="beach ball">';
-                $message .= '<input type="hidden" name="amount_1" value="15">';
-                $message .= '<input type="hidden" name="quantity_1" value="2">';
-
-                $message .= '<input type="hidden" name="item_name_2" value="towel">';
-                $message .= '<input type="hidden" name="amount_2" value="25">';
-                $message .= '<input type="hidden" name="quantity_2" value="3">';
-            }
-
-            if( $cmd=='_xclick-subscriptions' ) {
-                $message .= '<input type="hidden" name="item_name" value="Alice\'s Weekly Digest">';
-                $message .= '<input type="hidden" name="item_number" value="DIG Weekly">';
-
-                // Set the terms of the 1st trial period.
-                // An initial trial period that is free and lasts for seven days.
-                $message .= '<input type="hidden" name="a1" value="0">';
-                $message .= '<input type="hidden" name="p1" value="7">';
-                $message .= '<input type="hidden" name="t1" value="D">';
-
-                // Set the terms of the 2nd trial period.
-                // A second trial period that costs $5.00 USD and lasts for an additional three weeks.
-                $message .= '<input type="hidden" name="a2" value="5.00">';
-                $message .= '<input type="hidden" name="p2" value="3">';
-                $message .= '<input type="hidden" name="t2" value="W">';
-
-                // Set the terms of the regular subscription.
-                // The regular subscription begins four weeks after the subscriber signs up.
-                $message .= '<input type="hidden" name="a3" value="49.99">';
-                $message .= '<input type="hidden" name="p3" value="1">';
-                $message .= '<input type="hidden" name="t3" value="Y">';
-
-                // Set recurring payments until canceled.
-                $message .= '<input type="hidden" name="src" value="1">';
-            }
-
-            //foreach($settings['paypal_items'] as $k => $v){
-            //    $message .= '<input type="hidden" name="item_name" value="' . $item_name . '">';
-            //}
-            //$message .= '<input type="hidden" name="custom" value="' . $entry_id . '|' . $form_id . '|' . $payment_type . '">';
-            //$message .= '<input type="hidden" name="cbt" value="' . $continue_text . '">';
-            //$message .= '<input type="hidden" name="rm" value="2">';
-
-            //if( $settings['paypal_payment_type']=='subscription' ) {
-            //    $message .= '<input type="hidden" name="a3" value="' . $amount . '">';
-            //    $message .= '<input type="hidden" name="p3" value="' . $recurring_days . '">';
-            //    $message .= '<input type="hidden" name="t3" value="' . $recurring_type . '">';
-            //    $message .= '<input type="hidden" name="sra" value="' . $recurring_retry . '">';
-            //    $message .= '<input type="hidden" name="src" value="1">';
-            //    if( $recurring_time > 1 ) {
-            //        $message .= '<input type="hidden" name="srt" value="' . $recurring_time . '">';
-            //    }
-            //    if( $trial_period_val=='1' ) {
-            //        $message .= '<input type="hidden" name="a1" value="' . $trial_amount_val . '">';
-            //        $message .= '<input type="hidden" name="p1" value="' . $trial_days . '">';
-            //        $message .= '<input type="hidden" name="t1" value="' . $trial_recurring_type . '">';
-            //    }
-            //}else{
-            //    $message .= '<input type="hidden" name="amount" value="' . $amount . '">';
-            //}
-            //if( (isset($options['shipping_info'])) && ($options['shipping_info']==1) ) {
-            //    $message .= '<input type="hidden" name="first_name" value="' . $paypal_values['first_name'] . '" />';
-            //    $message .= '<input type="hidden" name="last_name" value="' . $paypal_values['last_name'] . '" />';
-            //    $message .= '<input type="hidden" name="email" value="' . $paypal_values['email'] . '" />';
-            //    $message .= '<input type="hidden" name="address1" value="' . $paypal_values['address1'] . '" />';
-            //    $message .= '<input type="hidden" name="address2" value="' . $paypal_values['address2'] . '" />';
-            //    $message .= '<input type="hidden" name="city" value="' . $paypal_values['city'] . '" />';
-            //    $message .= '<input type="hidden" name="state" value="' . $paypal_values['state'] . '" />';
-            //    $message .= '<input type="hidden" name="zip" value="' . $paypal_values['zip'] . '" />';
-            //    $message .= '<input type="hidden" name="country" value="' . $paypal_values['country'] . '" />';
-            //}
-            $message .= '<input type="submit" value="Pay with PayPal!" style="display:none;">';
-            $message .= '</form>';
-            $message .= '<script data-cfasync="false" type="text/javascript" language="javascript">';
-            $message .= 'document.getElementById("super_paypal_form").submit();';
-            $message .= '</script>';
-            echo $message;
-
             $this->init_hooks();
             do_action('super_paypal_loaded');
         }
@@ -301,6 +158,7 @@ if(!class_exists('SUPER_PayPal')) :
 
             // @since 1.1.0
             register_deactivation_hook( __FILE__, array( $this, 'deactivate' ) );
+
             // Filters since 1.1.0
             add_filter( 'super_after_activation_message_filter', array( $this, 'activation_message' ), 10, 2 );
 
@@ -311,6 +169,8 @@ if(!class_exists('SUPER_PayPal')) :
             add_action( 'super_front_end_posting_after_insert_post_action', array( $this, 'save_wc_order_post_session_data' ) );
             add_action( 'super_after_wp_insert_user_action', array( $this, 'save_wc_order_signup_session_data' ) );
             add_action( 'paypal_checkout_update_order_meta', array( $this, 'update_order_meta' ), 10, 1 );
+
+            add_action( 'parse_request', array( $this, 'paypal_ipn' ) );
 
             if ( $this->is_request( 'frontend' ) ) {
 
@@ -419,6 +279,144 @@ if(!class_exists('SUPER_PayPal')) :
                 }
             }
             return $activation_msg;
+        }
+
+        /**
+         * PayPal IPN
+         * 
+         * @since       1.1.0
+        */
+        public function paypal_ipn() {
+
+            if( (isset($_REQUEST['page'])) && ($_REQUEST['page']=='super_paypal_api') ) {
+                if( isset( $_POST['txn_id'] ) ) {
+                    global $wpdb;
+                    $req = 'cmd=_notify-validate';
+                    foreach( $_POST as $key => $value ) {
+                        $value = urlencode( stripslashes( $value ) );
+                        $req .= "&$key=$value";
+                    }
+
+                    $customs = explode( '|', $_REQUEST['custom'] );
+                    $form_id = $customs[1];
+                    if (!$form_id) return;
+
+                    $form_data = $wpdb->get_results($wpdb->prepare('SELECT * FROM ' . $wpdb->prefix . 'arf_paypal_forms WHERE form_id = %d', $form_id));
+
+                    if (count($form_data) == 0)
+                        return;
+
+                    $form_data = $form_data[0];
+                    $options = maybe_unserialize($form_data->options);
+
+                    $sandbox = ( isset($options['paypal_mode']) and $options['paypal_mode'] == 0 ) ? 'sandbox.' : '';
+
+                    $url = "https://www." . $sandbox . "paypal.com/cgi-bin/webscr/";
+
+                    $request = new WP_Http();
+                    $response = $request->post($url, array("sslverify" => false, "ssl" => true, "body" => $req, "timeout" => 20));
+
+                    if (!is_wp_error($response) and $response['body'] == 'VERIFIED') {
+                        $txn_id = $_POST['txn_id'];
+                        $payment_status = $_POST['payment_status'];
+                        $payment_results = $wpdb->get_results($wpdb->prepare("SELECT * FROM " . $wpdb->prefix . "arf_paypal_order WHERE txn_id = %s", $txn_id));
+                        $payment_results = $payment_results[0];
+
+                                        
+                        $item_name = $_POST['item_name'];
+                        $txn_id = $_POST['txn_id'];
+                        $payment_status = $_POST['payment_status'];
+                        $payment_amount = $_POST['mc_gross'];
+                        $payment_currency = $_POST['mc_currency'];
+                        $receiver_email = $_POST['receiver_email'];
+                        $payer_email = $_POST['payer_email'];
+                        $quantity = $_POST["quantity"];
+                        $user_id = get_current_user_id();
+                        $payment_date = $_POST['payment_date'];
+                        $payer_name = $_POST['first_name'] . ' ' . $_POST['last_name'];
+                        $entry_id = $customs[0];
+                        $form_id = $customs[1];
+                        $payment_type = $customs[2];
+
+                        $insert_array = array(
+                            'item_name' => $item_name,
+                            'txn_id' => $txn_id,
+                            'payment_status' => $payment_status,
+                            'mc_gross' => floatval($payment_amount),
+                            'mc_currency' => $payment_currency,
+                            'quantity' => $quantity,
+                            'payer_email' => $payer_email,
+                            'payer_name' => $payer_name,
+                            'payment_type' => $payment_type,
+                            'user_id' => $user_id,
+                            'entry_id' => $entry_id,
+                            'form_id' => $form_id,
+                            'payment_date' => $payment_date,
+                            'created_at' => current_time('mysql'),
+                            'is_verified' => 1,
+                        );
+                        $wpdb->insert($wpdb->prefix . 'arf_paypal_order', $insert_array, array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s', '%s', '%d'));
+
+                        
+
+                        update_option('IPN_LOG' . $form_id . '_' . time(), maybe_serialize($_POST));
+
+                        
+                        do_action('arf_after_paypal_successful_paymnet', $form_id, $entry_id, $txn_id);
+
+                        if (isset($options['notification']) and $options['notification'] and $this->is_arforms_support()) {
+                            global $arfsettings;
+
+                            $arf_form_data = $wpdb->get_results($wpdb->prepare("SELECT * FROM " . $wpdb->prefix . "arf_forms WHERE id = %d", $form_id));
+                            $arf_form_data = $arf_form_data[0];
+                            $arf_options = maybe_unserialize($arf_form_data->options);
+
+                            $arfblogname = wp_specialchars_decode(get_option('blogname'), ENT_QUOTES);
+
+                            $admin_email = $arf_options['reply_to'];
+                            if (!is_email($admin_email))
+                                $admin_email = $arfsettings->reply_to;
+
+                            $admin_from_reply = $arf_options['ar_admin_from_email'];
+                            if (!is_email($admin_from_reply))
+                                $admin_from_reply = $admin_email;
+
+                            $reply_to_name = (isset($arf_options['ar_admin_from_name'])) ? $arf_options['ar_admin_from_name'] : $arfsettings->reply_to_name;
+
+                            
+                            $subject = __('Payment received on', 'ARForms-paypal') . ' ' . $arfblogname;
+                            $message = $options['email_content'];
+                            $blogname = wp_specialchars_decode(get_option('blogname'), ENT_QUOTES);
+
+                            if (empty($message))
+                                $message = $arf_paypal->defalut_email_content();
+
+                            $item_name = $_POST['item_name'];
+                            $txn_id = $_POST['txn_id'];
+                            $payment_status = $_POST['payment_status'];
+                            $payment_amount = $_POST['mc_gross'];
+                            $payment_currency = $_POST['mc_currency'];
+                            $payment_date = $_POST['payment_date'];
+                            $payer_email = $_POST['payer_email'];
+                            $payer_id = $_POST['payer_id'];
+                            $payer_fname = $_POST['first_name'];
+                            $payer_lname = $_POST['last_name'];
+
+                            $message = str_replace('{paypal_transaction_id}', $txn_id, $message);
+                            $message = str_replace('{paypal_amount}', floatval($payment_amount), $message);
+                            $message = str_replace('{paypal_currency}', $payment_currency, $message);
+                            $message = str_replace('{paypal_payment_date}', $payment_date, $message);
+                            $message = str_replace('{paypal_site_name}', $blogname, $message);
+                            $message = str_replace('{paypal_payer_email}', $payer_email, $message);
+                            $message = str_replace('{paypal_payer_id}', $payer_id, $message);
+                            $message = str_replace('{paypal_payer_fname}', $payer_fname, $message);
+                            $message = str_replace('{paypal_payer_lname}', $payer_lname, $message);
+
+                            $arnotifymodel->send_notification_email_user($admin_email, $subject, $message, $admin_from_reply, $reply_to_name);
+                        }
+                    }
+                }
+            }
         }
 
 
@@ -542,132 +540,243 @@ if(!class_exists('SUPER_PayPal')) :
 
             if( (isset($settings['paypal_checkout'])) && ($settings['paypal_checkout']=='true') ) {
 
-                /*
-                // Create new payer and method
-                $payer = new Payer();
-                $payer->setPaymentMethod("paypal");
-
-                // Set redirect urls
-                $redirectUrls = new RedirectUrls();
-                $redirectUrls->setReturnUrl('http://localhost:3000/process.php')
-                  ->setCancelUrl('http://localhost:3000/cancel.php');
-
-                /*
-                $baseUrl = getBaseUrl();
-                $redirectUrls = new RedirectUrls();
-                $redirectUrls->setReturnUrl("$baseUrl/ExecutePayment.php?success=true")
-                    ->setCancelUrl("$baseUrl/ExecutePayment.php?success=false");
-                */
-
-                /*
-                $item1 = new Item();
-                $item1->setName('Ground Coffee 40 oz')
-                    ->setCurrency('USD')
-                    ->setQuantity(1)
-                    ->setSku("123123") // Similar to `item_number` in Classic API
-                    ->setPrice(7.5);
-
-                $item2 = new Item();
-                $item2->setName('Granola bars')
-                    ->setCurrency('USD')
-                    ->setQuantity(5)
-                    ->setSku("321321") // Similar to `item_number` in Classic API
-                    ->setPrice(2);
-
-                $itemList = new ItemList();
-                $itemList->setItems(array($item1, $item2));
-
-
-                // Set payment amount
-                $amount = new Amount();
-                $amount->setCurrency("USD")
-                  ->setTotal(10);
-
-                /*
-                $details = new Details();
-                $details->setShipping(1.2)
-                    ->setTax(1.3)
-                    ->setSubtotal(17.50);
-                
-                $amount = new Amount();
-                $amount->setCurrency("USD")
-                    ->setTotal(20)
-                    ->setDetails($details);
-                */
-
-                /*
-                // Set transaction object
-                $transaction = new Transaction();
-                $transaction->setAmount($amount)
-                  ->setDescription("Payment description");
-
-                /*
-                $transaction = new Transaction();
-                $transaction->setAmount($amount)
-                    ->setItemList($itemList)
-                    ->setDescription("Payment description")
-                    ->setInvoiceNumber(uniqid());
-                */
-
-                /*
-                // Create the full payment object
-                $payment = new Payment();
-                $payment->setIntent('sale')
-                  ->setPayer($payer)
-                  ->setRedirectUrls($redirectUrls)
-                  ->setTransactions(array($transaction));
-
-                // Create payment with valid API context
-                try {
-                    $payment->create($apiContext);
-
-                    // Get PayPal redirect URL and redirect user
-                    $approvalUrl = $payment->getApprovalLink();
-
-                    // REDIRECT USER TO $approvalUrl
-                } catch (PayPal\Exception\PayPalConnectionException $ex) {
-                    echo $ex->getCode();
-                    echo $ex->getData();
-                    die($ex);
-                } catch (Exception $ex) {
-                    die($ex);
+                if(!isset($settings['paypal_mode'])) $settings['paypal_mode'] = 'sandbox';
+                if(!isset($settings['paypal_payment_type'])) $settings['paypal_payment_type'] = 'product';
+                if(!isset($settings['paypal_merchant_email'])) $settings['paypal_merchant_email'] = '';
+                if(!isset($settings['paypal_cancel_url'])) $settings['paypal_cancel_url'] = get_home_url();               
+                if(!isset($settings['paypal_custom_return_url'])) $settings['paypal_custom_return_url'] = '';
+                if(!isset($settings['paypal_return_url'])) $settings['paypal_return_url'] = get_home_url();
+                if(!isset($settings['paypal_currency_code'])) $settings['paypal_currency_code'] = 'USD';
+                if(!isset($settings['paypal_item_amount'])) $settings['paypal_item_amount'] = '5.00';
+                if( is_numeric( $settings['paypal_item_amount'] ) ) {
+                    $settings['paypal_item_amount'] = number_format((float) $settings['paypal_item_amount'], 2);
+                    if( ( isset( self::$currency_codes[$settings['paypal_currency_code']]['decimal'] ) ) && (self::$currency_codes[$settings['paypal_currency_code']]['decimal']==true) ) {
+                        $settings['paypal_item_amount'] = (float) $settings['paypal_item_amount'];
+                        $settings['paypal_item_amount'] = floor($settings['paypal_item_amount']);
+                    }
                 }
 
+                $home_url = get_home_url(). "/";
+                if( strstr($home_url, '?') ) {
+                    $return_url = $home_url . '&page=super_paypal_response&custom=custom-data'; // . absint($atts['entry_id']) . '|' . $form_id . '|' . $payment_type;
+                    $notify_url = $home_url . '&page=super_paypal_ipn';
+                }else{
+                    $return_url = $home_url . '?page=super_paypal_response&custom=custom-data'; // . absint($atts['entry_id']) . '|' . $form_id . '|' . $payment_type;
+                    $notify_url = $home_url . '?page=super_paypal_ipn';
+                }
+                if($settings['paypal_custom_return_url']=='true'){
+                    $return_url = $settings['paypal_return_url'];
+                }
 
-                // Complete the payment
-                // After the customer confirms the payment information, he or she is redirected to the URL that
-                // was specified in the payment information object, set in the first step. In the query string will
-                // also be two parameters, PayerID and paymentId. These parameters are confirmation objects
-                // used to complete the payment.
                 /*
-                use PayPal\Api\Amount;
-                use PayPal\Api\Details;
-                use PayPal\Api\ExecutePayment;
-                use PayPal\Api\Payment;
-                use PayPal\Api\PaymentExecution;
-                use PayPal\Api\Transaction;
-
-                // Get payment object by passing paymentId
-                $paymentId = $_GET['paymentId'];
-                $payment = Payment::get($paymentId, $apiContext);
-                $payerId = $_GET['PayerID'];
-
-                // Execute payment with payer id
-                $execution = new PaymentExecution();
-                $execution->setPayerId($payerId);
-
-                try {
-                // Execute payment
-                $result = $payment->execute($execution, $apiContext);
-                    var_dump($result);
-                } catch (PayPal\Exception\PayPalConnectionException $ex) {
-                    echo $ex->getCode();
-                    echo $ex->getData();
-                    die($ex);
-                } catch (Exception $ex) {
-                    die($ex);
+                $custom_data
+                if( $settings['save_contact_entry']=='yes' ) {
+                    $entry_id = $atts['entry_id'];
+                }
+                $form_id = 2;
+                $payment_type = 3;
+                $home_url = get_home_url(). "/";
+                if( strstr($home_url, '?') ) {
+                    $return_url = $home_url . '&page=super_paypal_response&custom=' . $entry_id . '|' . $form_id . '|' . $payment_type;
+                    $notify_url = $home_url . '&page=super_paypal_ipn';
+                }else{
+                    $return_url = $home_url . '?page=super_paypal_response&custom=' . $entry_id . '|' . $form_id . '|' . $payment_type;
+                    $notify_url = $home_url . '?page=super_paypal_ipn';
                 }
                 */
+
+                // _xclick                  - The button that the person clicked was a Buy Now button.
+                // _cart                    - For shopping cart purchases. The following variables specify the kind of shopping cart button that the person clicked:
+                //                              - add — Add to Cart buttons for the PayPal Shopping Cart
+                //                              - display — View Cart buttons for the PayPal Shopping Cart
+                //                              - upload — The Cart Upload command for third-party carts
+                // _xclick-subscriptions    - The button that the person clicked was a Subscribe button.
+                // _xclick-auto-billing     - The button that the person clicked was an Automatic Billing button.
+                // _xclick-payment-plan     - The button that the person clicked was an Installment Plan button.
+                // _donations               - The button that the person clicked was a Donate button.
+                // _s-xclick                - The button that the person clicked was protected from tampering by using encryption, or the button was saved in the merchant's PayPal account. PayPal determines which kind of button was clicked by decoding the encrypted code or by looking up the saved button in the merchant's account.
+
+                $cmd = '_xclick';
+                switch ($settings['paypal_payment_type']) {
+                    case 'product':
+                        $cmd = '_xclick';
+                        break;
+                    case 'donation':
+                        $cmd = '_donations';
+                        break;
+                    case 'subscription':
+                        $cmd = '_xclick-subscriptions';
+                        break;
+                    case 'cart':
+                        $cmd = '_cart';
+                        break;
+                }
+
+                $message = '';
+                $message .= '<form id="super_paypal_' . $settings['id'] . '" action="https://www.' . ($settings['paypal_mode']=='sandbox' ? 'sandbox.' : '') . 'paypal.com/cgi-bin/webscr" method="post">';
+                $message .= '<input type="hidden" name="cmd" value="' . $cmd . '">';
+                $message .= '<input type="hidden" name="charset" value="UTF-8">';
+                $message .= '<input type="hidden" name="business" value="' . esc_attr( $settings['paypal_merchant_email'] ) . '">';
+                $message .= '<input type="hidden" name="notify_url" value="' . esc_url($notify_url) . '">';
+                $message .= '<input type="hidden" name="return" value="' . esc_url($return_url) . '">';
+                $message .= '<input type="hidden" name="cancel_return" value="' . esc_url($settings['paypal_cancel_url']) . '">';
+                $message .= '<input type="hidden" name="currency_code" value="' . $settings['paypal_currency_code'] . '" />';
+
+                if( $settings['paypal_invoice']!='' ) {
+                    $message .= '<input type="hidden" name="invoice" value="' . $settings['paypal_invoice'] . '">';
+                }
+                if( $settings['paypal_handling']!='' ) {
+                    $message .= '<input type="hidden" name="handling" value="' . $settings['paypal_handling'] . '">';
+                }
+                if( $settings['paypal_tax']!='' ) {
+                    $message .= '<input type="hidden" name="tax" value="' . $settings['paypal_tax'] . '">';
+                }
+                if( $settings['paypal_tax_rate']!='' ) {
+                    $message .= '<input type="hidden" name="tax_rate" value="' . $settings['paypal_tax_rate'] . '">';
+                }
+                if( $settings['paypal_weight_unit']!='' ) {
+                    $message .= '<input type="hidden" name="weight_unit" value="' . $settings['paypal_weight_unit'] . '">';
+                }
+
+                if( ($cmd=='_xclick') || ($cmd=='_donations') ) {
+
+                    if( $settings['paypal_item_name']!='' ) {
+                        $message .= '<input type="hidden" name="item_name" value="' . $settings['paypal_item_name'] . '">';
+                    }
+                    if( $settings['paypal_item_number']!='' ) {
+                        $message .= '<input type="hidden" name="item_number" value="' . $settings['paypal_item_number'] . '">';
+                    }
+                    if( $settings['paypal_item_quantity']!='' ) {
+                        $message .= '<input type="hidden" name="quantity" value="' . $settings['paypal_item_quantity'] . '">';
+                    }
+                    if( $settings['paypal_item_shipping']!='' ) {
+                        $message .= '<input type="hidden" name="shipping" value="' . $settings['paypal_item_shipping'] . '">';
+                        //$message .= '<input type="hidden" name="shipping2" value="' . $settings['paypal_item_shipping'] . '">';
+                    }
+                    if( $settings['paypal_undefined_quantity']!='' ) {
+                        $message .= '<input type="hidden" name="undefined_quantity" value="' . $settings['paypal_undefined_quantity'] . '">';
+                    }
+                    if( $settings['paypal_item_weight']!='' ) {
+                        $message .= '<input type="hidden" name="weight" value="' . $settings['paypal_item_weight'] . '">';
+                    }
+
+                    if($cmd=='_xclick'){
+                        if( $settings['paypal_item_discount_amount']!='' ) {
+                            $message .= '<input type="hidden" name="discount_amount" value="' . $settings['paypal_item_discount_amount'] . '">';
+                            $message .= '<input type="hidden" name="discount_amount2" value="' . $settings['paypal_item_discount_amount'] . '">';
+                        }
+                        if( $settings['paypal_item_discount_rate']!='' ) {
+                            $message .= '<input type="hidden" name="discount_rate" value="' . $settings['paypal_item_discount_rate'] . '">';
+                            $message .= '<input type="hidden" name="discount_rate2" value="' . $settings['paypal_item_discount_rate'] . '">';
+                        }
+                        if( $settings['paypal_item_discount_num']!='' ) {
+                            $message .= '<input type="hidden" name="discount_num" value="' . $settings['paypal_item_discount_num'] . '">';
+                        }
+                    }
+
+                    $message .= '<input type="hidden" name="amount" value="' . $settings['paypal_item_amount'] . '">';
+
+                }
+
+                if( $cmd=='_cart' ) {
+                    $message .= '<input type="hidden" name="upload" value="1">';
+
+                    $message .= '<input type="hidden" name="item_name_1" value="beach ball">';
+                    $message .= '<input type="hidden" name="amount_1" value="15">';
+                    $message .= '<input type="hidden" name="quantity_1" value="2">';
+
+                    $message .= '<input type="hidden" name="item_name_2" value="towel">';
+                    $message .= '<input type="hidden" name="amount_2" value="25">';
+                    $message .= '<input type="hidden" name="quantity_2" value="3">';
+                }
+
+                if( $cmd=='_xclick-subscriptions' ) {
+                    $message .= '<input type="hidden" name="item_name" value="Alice\'s Weekly Digest">';
+                    $message .= '<input type="hidden" name="item_number" value="DIG Weekly">';
+
+                    // a1 - the price of the subscription e.g: 5.00
+                    // p1 - the period of the subscription e.g: 7 (for 7 days if t1 has value of D)
+                    // t1 - the time format for the period e.g: D=days, W=weeks, M=months, Y=years
+
+                    // Set the terms of the 1st trial period.
+                    // An initial trial period that is free and lasts for seven days.
+                    $message .= '<input type="hidden" name="a1" value="0">';
+                    $message .= '<input type="hidden" name="p1" value="7">';
+                    $message .= '<input type="hidden" name="t1" value="D">';
+
+                    // Set the terms of the 2nd trial period.
+                    // A second trial period that costs $5.00 USD and lasts for an additional three weeks.
+                    $message .= '<input type="hidden" name="a2" value="5.00">';
+                    $message .= '<input type="hidden" name="p2" value="3">';
+                    $message .= '<input type="hidden" name="t2" value="W">';
+
+                    // Set the terms of the regular subscription.
+                    // The regular subscription begins four weeks after the subscriber signs up.
+                    $message .= '<input type="hidden" name="a3" value="49.99">';
+                    $message .= '<input type="hidden" name="p3" value="1">';
+                    $message .= '<input type="hidden" name="t3" value="Y">';
+
+                    // Set recurring payments until canceled.
+                    $message .= '<input type="hidden" name="src" value="1">';
+                }
+
+                //foreach($settings['paypal_items'] as $k => $v){
+                //    $message .= '<input type="hidden" name="item_name" value="' . $item_name . '">';
+                //}
+                //$message .= '<input type="hidden" name="custom" value="' . $entry_id . '|' . $form_id . '|' . $payment_type . '">';
+                //$message .= '<input type="hidden" name="cbt" value="' . $continue_text . '">';
+                //$message .= '<input type="hidden" name="rm" value="2">';
+
+                //if( $settings['paypal_payment_type']=='subscription' ) {
+                //    $message .= '<input type="hidden" name="a3" value="' . $amount . '">';
+                //    $message .= '<input type="hidden" name="p3" value="' . $recurring_days . '">';
+                //    $message .= '<input type="hidden" name="t3" value="' . $recurring_type . '">';
+                //    $message .= '<input type="hidden" name="sra" value="' . $recurring_retry . '">';
+                //    $message .= '<input type="hidden" name="src" value="1">';
+                //    if( $recurring_time > 1 ) {
+                //        $message .= '<input type="hidden" name="srt" value="' . $recurring_time . '">';
+                //    }
+                //    if( $trial_period_val=='1' ) {
+                //        $message .= '<input type="hidden" name="a1" value="' . $trial_amount_val . '">';
+                //        $message .= '<input type="hidden" name="p1" value="' . $trial_days . '">';
+                //        $message .= '<input type="hidden" name="t1" value="' . $trial_recurring_type . '">';
+                //    }
+                //}else{
+                //    $message .= '<input type="hidden" name="amount" value="' . $amount . '">';
+                //}
+                //if( (isset($options['shipping_info'])) && ($options['shipping_info']==1) ) {
+                //    $message .= '<input type="hidden" name="first_name" value="' . $paypal_values['first_name'] . '" />';
+                //    $message .= '<input type="hidden" name="last_name" value="' . $paypal_values['last_name'] . '" />';
+                //    $message .= '<input type="hidden" name="email" value="' . $paypal_values['email'] . '" />';
+                //    $message .= '<input type="hidden" name="address1" value="' . $paypal_values['address1'] . '" />';
+                //    $message .= '<input type="hidden" name="address2" value="' . $paypal_values['address2'] . '" />';
+                //    $message .= '<input type="hidden" name="city" value="' . $paypal_values['city'] . '" />';
+                //    $message .= '<input type="hidden" name="state" value="' . $paypal_values['state'] . '" />';
+                //    $message .= '<input type="hidden" name="zip" value="' . $paypal_values['zip'] . '" />';
+                //    $message .= '<input type="hidden" name="country" value="' . $paypal_values['country'] . '" />';
+                //}
+                $message .= '<input type="submit" value="Pay with PayPal!" style="display:none;">';
+                $message .= '</form>';
+                $message .= '<script data-cfasync="false" type="text/javascript" language="javascript">';
+                $message .= 'document.getElementById("super_paypal_' . $settings['id'] . '").submit();';
+                $message .= '</script>';
+
+                if($settings['form_show_thanks_msg']=='true'){
+                    if($settings['form_thanks_title']!=''){
+                        $settings['form_thanks_title'] = '<h1>' . $settings['form_thanks_title'] . '</h1>';
+                    }
+                    $msg = do_shortcode( $settings['form_thanks_title'] . nl2br($settings['form_thanks_description']) );
+                }
+
+                SUPER_Common::output_error(
+                    $error = false,
+                    $msg = $msg.$message,
+                    $redirect = false,
+                    $fields = array(),
+                    $display = true,
+                    $loading = true
+                );
+
             }
 
         }
@@ -679,6 +788,20 @@ if(!class_exists('SUPER_PayPal')) :
          *  @since      1.0.0
         */
         public static function add_settings( $array, $settings ) {
+
+            $statuses = SUPER_Settings::get_entry_statuses();
+            $new_statuses = array();
+            foreach($statuses as $k => $v){
+                $new_statuses[$k] = $v['name'];
+            }
+            $statuses = $new_statuses;
+            unset($new_statuses);
+
+            $currencies = array();
+            foreach(self::$currency_codes as $k => $v){
+                $currencies[$k] = $k . ' - ' . $v['name'] . ' (' . $v['symbol'] . ')';
+            }
+
             $array['paypal_checkout'] = array(        
                 'hidden' => 'settings',
                 'name' => __( 'PayPal Checkout', 'super-forms' ),
@@ -691,37 +814,277 @@ if(!class_exists('SUPER_PayPal')) :
                         'values' => array(
                             'true' => __( 'Enable PayPal Checkout', 'super-forms' ),
                         ),
-                    ),               
-                    'paypal_checkout_empty_cart' => array(
-                        'default' => SUPER_Settings::get_value( 0, 'paypal_checkout_empty_cart', $settings['settings'], '' ),
+                    ),
+                    'paypal_mode' => array(
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_mode', $settings['settings'], '' ),
                         'type' => 'checkbox',
                         'values' => array(
-                            'true' => __( 'Empty cart before adding products', 'super-forms' ),
+                            'sandbox' => __( 'Enable PayPal Sandbox mode (for testing purposes only)', 'super-forms' ),
                         ),
                         'filter' => true,
                         'parent' => 'paypal_checkout',
                         'filter_value' => 'true',
                     ),
-                    'paypal_checkout_remove_coupons' => array(
-                        'default' => SUPER_Settings::get_value( 0, 'paypal_checkout_remove_coupons', $settings['settings'], '' ),
-                        'type' => 'checkbox',
-                        'values' => array(
-                            'true' => __( 'Remove/clear coupons before redirecting to cart', 'super-forms' ),
-                        ),
+                    'paypal_merchant_email' => array(
+                        'name' => __( 'PayPal merchant email (to receive payments)', 'super-forms' ),
+                        'desc' => __( 'Your PayPal ID or an email address associated with your PayPal account. Email addresses must be confirmed.', 'super-forms' ),
+                        'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_merchant_email', $settings['settings'], '' ),
+                        'type' => 'text',
                         'filter' => true,
                         'parent' => 'paypal_checkout',
                         'filter_value' => 'true',
-                    ), 
-                    'paypal_checkout_remove_fees' => array(
-                        'default' => SUPER_Settings::get_value( 0, 'paypal_checkout_remove_fees', $settings['settings'], '' ),
-                        'type' => 'checkbox',
+                    ),
+
+
+                    'paypal_currency_code' => array(
+                        'name' => __( 'PayPal currency code', 'super-forms' ),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_currency_code', $settings['settings'], 'USD' ),
+                        'type' => 'select',
+                        'values' => $currencies,
+                        'filter' => true,
+                        'parent' => 'paypal_checkout',
+                        'filter_value' => 'true',
+                    ),
+                    'paypal_payment_type' => array(
+                        'name' => __( 'PayPal payment method', 'super-forms' ),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_payment_type', $settings['settings'], '_xclick' ),
+                        'type' => 'select',
                         'values' => array(
-                            'true' => __( 'Remove/clear fees before redirecting to cart', 'super-forms' ),
+                            'product' => __( 'Single product or service checkout', 'super-forms' ),
+                            'donation' => __( 'Donation checkout', 'super-forms' ),
+                            'subscription' => __( 'Subscription checkout', 'super-forms' ),
+                            'cart' => __( 'Cart checkout (for multiple product checkout)', 'super-forms' ),
                         ),
                         'filter' => true,
                         'parent' => 'paypal_checkout',
                         'filter_value' => 'true',
                     ),
+                    'paypal_item_name' => array(
+                        'name' => __( 'Item description (leave blank to let users enter a name)', 'super-forms' ),
+                        'desc' => __( 'Description of item. If you omit this variable, buyers enter their own name during checkout.', 'super-forms' ),
+                        'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_item_name', $settings['settings'], 'Flower (roses)' ),
+                        'type' => 'text',
+                        'filter' => true,
+                        'parent' => 'paypal_payment_type',
+                        'filter_value' => 'product,donation',
+                    ),
+                    'paypal_item_amount' => array(
+                        'name' => __( 'Item price (leave blank to let user enter their own price)', 'super-forms' ),
+                        'desc' => __( 'The price or amount of the product, service, or contribution, not including shipping, handling, or tax. If you omit this variable from Buy Now or Donate buttons, buyers enter their own amount at the time of payment.', 'super-forms' ),
+                        'label' => __( 'You are allowed to use {tags} if needed (only decimal format is allowed e.g: 16.95)', 'super-forms' ),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_item_amount', $settings['settings'], '5.00' ),
+                        'type' => 'text',
+                        'filter' => true,
+                        'parent' => 'paypal_payment_type',
+                        'filter_value' => 'product,donation',
+                    ),
+                    'paypal_item_quantity' => array(
+                        'name' => __( 'Quantity (Number of items)', 'super-forms' ),
+                        'desc' => __( 'Note: The value for quantity must be a positive integer. Null, zero, or negative numbers are not allowed.', 'super-forms' ),
+                        'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_item_quantity', $settings['settings'], '1' ),
+                        'type' => 'text',
+                        'filter' => true,
+                        'parent' => 'paypal_payment_type',
+                        'filter_value' => 'product,donation',
+                    ),
+
+                    // Custom return URL
+                    'paypal_custom_return_url' => array(
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_custom_return_url', $settings['settings'], '' ),
+                        'type' => 'checkbox',
+                        'values' => array(
+                            'true' => __( 'Enable custom return URL', 'super-forms' ),
+                        ),
+                        'filter' => true,
+                        'parent' => 'paypal_checkout',
+                        'filter_value' => 'true',
+                    ),
+                    'paypal_return_url' => array(
+                        'name' => __( 'PayPal return URL (when user successfully returns from paypal)', 'super-forms' ),
+                        'desc' => __( 'The URL to which PayPal posts information about the payment, in the form of Instant Payment Notification messages.', 'super-forms' ),
+                        'label' => __( 'User will be redirected to this URL after making a payment', 'super-forms' ),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_return_url', $settings['settings'], get_home_url() . '/my-custom-thank-you-page' ),
+                        'type' => 'text',
+                        'filter' => true,
+                        'parent' => 'paypal_custom_return_url',
+                        'filter_value' => 'true',
+                    ),
+                    // Cancel URL when order was canceled by the user
+                    'paypal_cancel_url' => array(
+                        'name' => __( 'PayPal cancel URL (when payment is canceled by user)', 'super-forms' ),
+                        'label' => __( 'User that cancels payment will be redirected to this URL', 'super-forms' ),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_cancel_url', $settings['settings'], get_home_url() . '/my-custom-canceled-page' ),
+                        'type' => 'text',
+                        'filter' => true,
+                        'parent' => 'paypal_checkout',
+                        'filter_value' => 'true',
+                    ),
+
+
+                    // Advanced PayPal Settings
+                    'paypal_advanced_settings' => array(
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_advanced_settings', $settings['settings'], '' ),
+                        'type' => 'checkbox',
+                        'values' => array(
+                            'true' => __( 'Show Advanced PayPal Settings', 'super-forms' ),
+                        ),
+                        'filter' => true,
+                        'parent' => 'paypal_checkout',
+                        'filter_value' => 'true',
+                    ),
+                    'paypal_item_discount_amount' => array(
+                        'name' => __( 'Discount amount (leave blank for no discount)', 'super-forms' ),
+                        'desc' => __( 'Discount amount associated with an item, which must be less than the selling price of the item.', 'super-forms' ),
+                        'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_item_discount_amount', $settings['settings'], '' ),
+                        'type' => 'text',
+                        'filter' => true,
+                        'parent' => 'paypal_advanced_settings',
+                        'filter_value' => 'true',
+                    ),
+                    'paypal_item_discount_rate' => array(
+                        'name' => __( 'Discount rate (leave blank for no discount)', 'super-forms' ),
+                        'desc' => __( 'Discount rate, as a percentage, associated with an item. Set to a value less than 100', 'super-forms' ),
+                        'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_item_discount_rate', $settings['settings'], '' ),
+                        'type' => 'text',
+                        'filter' => true,
+                        'parent' => 'paypal_advanced_settings',
+                        'filter_value' => 'true',
+                    ),
+                    'paypal_item_discount_num' => array(
+                        'name' => __( 'Discount number', 'super-forms' ),
+                        'desc' => __( 'Number of additional quantities of the item to which the discount applies.', 'super-forms' ),
+                        'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_item_discount_num', $settings['settings'], '' ),
+                        'type' => 'text',
+                        'filter' => true,
+                        'parent' => 'paypal_advanced_settings',
+                        'filter_value' => 'true',
+                    ),
+
+                    
+
+                    'paypal_item_shipping' => array(
+                        'name' => __( 'Shipping cost', 'super-forms' ),
+                        'desc' => __( 'The cost of shipping this item.', 'super-forms' ),
+                        'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_item_shipping', $settings['settings'], '' ),
+                        'type' => 'text',
+                        'filter' => true,
+                        'parent' => 'paypal_advanced_settings',
+                        'filter_value' => 'true',
+                    ),
+                    'paypal_handling' => array(
+                        'name' => __( 'Handling charges', 'super-forms' ),
+                        'desc' => __( 'This variable is not quantity-specific. The same handling cost applies, regardless of the number of items on the order.', 'super-forms' ),
+                        'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_handling', $settings['settings'], '' ),
+                        'type' => 'text',
+                        'filter' => true,
+                        'parent' => 'paypal_advanced_settings',
+                        'filter_value' => 'true',
+                    ),
+                    'paypal_tax' => array(
+                        'name' => __( 'Tax', 'super-forms' ),
+                        'desc' => __( 'Set this variable to a flat tax amount to apply to the payment regardless of the buyer\'s location. This value overrides any tax settings set in your account profile.', 'super-forms' ),
+                        'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_tax', $settings['settings'], '' ),
+                        'type' => 'text',
+                        'filter' => true,
+                        'parent' => 'paypal_advanced_settings',
+                        'filter_value' => 'true',
+                    ),
+                    'paypal_tax_rate' => array(
+                        'name' => __( 'Tax rate', 'super-forms' ),
+                        'desc' => __( 'Set this variable to a percentage that applies to the amount multiplied by the quantity selected during checkout. This value overrides any tax settings set in your account profile', 'super-forms' ),
+                        'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_tax_rate', $settings['settings'], '' ),
+                        'type' => 'text',
+                        'filter' => true,
+                        'parent' => 'paypal_advanced_settings',
+                        'filter_value' => 'true',
+                    ),
+                    'paypal_item_number' => array(
+                        'name' => __( 'Item number (to track product or service)', 'super-forms' ),
+                        'desc' => __( 'Pass-through variable for you to track product or service purchased or the contribution made. The value you specify is passed back to you upon payment completion.', 'super-forms' ),
+                        'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_item_number', $settings['settings'], '' ),
+                        'type' => 'text',
+                        'filter' => true,
+                        'parent' => 'paypal_advanced_settings',
+                        'filter_value' => 'true',
+                    ),
+                    'paypal_undefined_quantity' => array(
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_undefined_quantity', $settings['settings'], '' ),
+                        'type' => 'checkbox',
+                        'values' => array(
+                            'true' => __( 'Allow buyers to specify the quantity', 'super-forms' ),
+                        ),
+                        'filter' => true,
+                        'parent' => 'paypal_advanced_settings',
+                        'filter_value' => 'true',
+                    ),
+                    'paypal_item_weight' => array(
+                        'name' => __( 'Weight of item', 'super-forms' ),
+                        'desc' => __( 'If profile-based shipping rates are configured with a basis of weight, the sum of weight values is used to calculate the shipping charges for the payment. A valid value is a decimal number with two significant digits to the right of the decimal point.', 'super-forms' ),
+                        'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_item_weight', $settings['settings'], '' ),
+                        'type' => 'text',
+                        'filter' => true,
+                        'parent' => 'paypal_advanced_settings',
+                        'filter_value' => 'true',
+                    ),
+                    'paypal_weight_unit' => array(
+                        'name' => __( 'Select weight unit', 'super-forms' ),
+                        'desc' => __( 'The unit of measure if weight is specified.', 'super-forms' ),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_weight_unit', $settings['settings'], 'lbs' ),
+                        'type' => 'select',
+                        'values'=> array(
+                            'lbs' => 'lbs (default)',
+                            'kgs' => 'kgs',
+                        ),
+                        'filter' => true,
+                        'parent' => 'paypal_advanced_settings',
+                        'filter_value' => 'true',
+                    ),
+                    'paypal_invoice' => array(
+                        'name' => __( 'Invoice number', 'super-forms' ),
+                        'desc' => __( 'Use to identify your invoice number for this purchase.', 'super-forms' ),
+                        'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_invoice', $settings['settings'], '' ),
+                        'type' => 'text',
+                        'filter' => true,
+                        'parent' => 'paypal_advanced_settings',
+                        'filter_value' => 'true',
+                    ),
+
+                    'paypal_completed_entry_status' => array(
+                        'name'=>__( 'Entry status after payment completed', 'super-forms' ),
+                        'label' => sprintf( __( 'You can add custom statuses via %sSuper Forms > Settings > Backend Settings%s if needed', 'super-forms' ), '<a target="blank" href="' . admin_url() . 'admin.php?page=super_settings#backend">', '</a>'),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_completed_entry_status', $settings['settings'], 'completed' ),
+                        'type'=>'select',
+                        'values'=> $statuses,
+                        'filter' => true,
+                        'parent' => 'paypal_checkout',
+                        'filter_value' => 'true',
+                    ),
+
+                    // Notify URL (for paypal IPN)
+                    'paypal_notify_url' => array(
+                        'name' => __( 'PayPal notify URL (only for developers!)', 'super-forms' ),
+                        'label' => __( 'Used for IPN (Instant payment notifications) when payment is confirmed by paypal', 'super-forms' ),
+                        'default' => SUPER_Settings::get_value( 0, 'paypal_notify_url', $settings['settings'], '' ),
+                        'type' => 'text',
+                        'filter' => true,
+                        'parent' => 'paypal_advanced_settings',
+                        'filter_value' => 'true',
+                    ),
+
+                    /*
                     'paypal_checkout_products' => array(
                         'name' => __( 'Enter the product(s) ID that needs to be added to the cart', 'super-forms' ) . '<br /><i>' . __( 'If field is inside dynamic column, system will automatically add all the products. Put each product ID with it\'s quantity on a new line separated by pipes "|".<br /><strong>Example with tags:</strong> {id}|{quantity}<br /><strong>Example without tags:</strong> 82921|3<br /><strong>Example with variations:</strong> {id}|{quantity}|{variation_id}<br /><strong>Example with dynamic pricing:</strong> {id}|{quantity}|none|{price}<br /><strong>Allowed values:</strong> integer|integer|integer|float<br />(dynamic pricing requires <a target="_blank" href="https://paypal.com/products/name-your-price/">PayPal Name Your Price add-on</a>).', 'super-forms' ) . '</i>',
                         'desc' => __( 'Put each on a new line, {tags} can be used to retrieve data', 'super-forms' ),
@@ -731,7 +1094,6 @@ if(!class_exists('SUPER_PayPal')) :
                         'parent' => 'paypal_checkout',
                         'filter_value' => 'true',
                     ),
-               
                     'paypal_checkout_coupon' => array(
                         'name' => __( 'Apply the following coupon code (leave blank for none):', 'super-forms' ),
                         'default' => SUPER_Settings::get_value( 0, 'paypal_checkout_coupon', $settings['settings'], '' ),
@@ -749,7 +1111,6 @@ if(!class_exists('SUPER_PayPal')) :
                         'parent' => 'paypal_checkout',
                         'filter_value' => 'true',
                     ),
-
                     // @since 1.2.2 - add custom checkout fields to checkout page
                     'paypal_checkout_fields' => array(
                         'name' => __( 'Add custom checkout field(s)', 'super-forms' ) . '<br /><i>' . __( 'Put each field on a new line with field options seperated by pipes "|".', 'super-forms' ) . '</i><br />',
@@ -775,6 +1136,7 @@ if(!class_exists('SUPER_PayPal')) :
                         <strong>label_class</strong> – class for the label element<br />
                         <strong>options</strong> – for select boxes, array of options (key => value pairs)
                         */
+                    /*
                     ),
                     'paypal_checkout_fields_skip_empty' => array(
                         'default' => SUPER_Settings::get_value( 0, 'paypal_checkout_fields_skip_empty', $settings['settings'], '' ),
@@ -786,28 +1148,17 @@ if(!class_exists('SUPER_PayPal')) :
                         'parent' => 'paypal_checkout',
                         'filter_value' => 'true',
                     ),
+                    */
 
-                    'paypal_redirect' => array(
-                        'name' => __( 'Redirect to Checkout page or Shopping Cart?', 'super-forms' ),
-                        'default' => SUPER_Settings::get_value( 0, 'paypal_redirect', $settings['settings'], 'checkout' ),
-                        'type' => 'select',
-                        'values' => array(
-                            'checkout' => __( 'Checkout page (default)', 'super-forms' ),
-                            'cart' => __( 'Shopping Cart', 'super-forms' ),
-                            'none' => __( 'None (use the form redirect)', 'super-forms' ),
-                        ),
-                        'filter' => true,
-                        'parent' => 'paypal_checkout',
-                        'filter_value' => 'true',
-                    ),
+
                 )
             );
 
             if ( class_exists( 'SUPER_Frontend_Posting' ) ) {
-                $array['paypal_checkout']['fields']['paypal_post_status'] = array(
+                $array['paypal_checkout']['fields']['paypal_completed_post_status'] = array(
                     'name' => __( 'Post status after payment complete', 'super-forms' ),
                     'desc' => __( 'Only used for Front-end posting (publish, future, draft, pending, private, trash, auto-draft)?', 'super-forms' ),
-                    'default' => SUPER_Settings::get_value( 0, 'paypal_post_status', $settings['settings'], 'publish' ),
+                    'default' => SUPER_Settings::get_value( 0, 'paypal_completed_post_status', $settings['settings'], 'publish' ),
                     'type' => 'select',
                     'values' => array(
                         'publish' => __( 'Publish (default)', 'super-forms' ),
@@ -825,10 +1176,10 @@ if(!class_exists('SUPER_PayPal')) :
             }
 
             if ( class_exists( 'SUPER_Register_Login' ) ) {
-                $array['paypal_checkout']['fields']['paypal_signup_status'] = array(
+                $array['paypal_checkout']['fields']['paypal_completed_signup_status'] = array(
                     'name' => __( 'Registered user login status after payment complete', 'super-forms' ),
                     'desc' => __( 'Only used for Register & Login add-on (active, pending, blocked)?', 'super-forms' ),
-                    'default' => SUPER_Settings::get_value( 0, 'paypal_signup_status', $settings['settings'], 'active' ),
+                    'default' => SUPER_Settings::get_value( 0, 'paypal_completed_signup_status', $settings['settings'], 'active' ),
                     'type' => 'select',
                     'values' => array(
                         'active' => __( 'Active (default)', 'super-forms' ),
