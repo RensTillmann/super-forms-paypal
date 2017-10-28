@@ -1,0 +1,43 @@
+/*------------------------
+    Contact Entry Page
+-------------------------*/
+.super-txn-status {
+    background-color: #808080;
+    padding:2px 10px 4px 10px;
+    -webkit-border-radius: 5px;
+    -moz-border-radius: 5px;
+    border-radius: 5px;
+    color: white;
+    font-size:12px;
+    cursor: default;
+}
+.super-txn-status-Completed,
+.super-txn-status-Canceled_Reversal,
+.super-txn-status-Processed {
+    background-color: #2BC300;
+}
+.super-txn-status-Created,
+.super-txn-status-Pending {
+    background-color: #FF7700;
+}
+.super-txn-status-Refunded,
+.super-txn-status-Reversed,
+.super-txn-status-Denied,
+.super-txn-status-Expired,
+.super-txn-status-Failed {
+    background-color: #E40000;
+}
+.super-txn-status-Voided {
+    background-color: #000000;
+}
+.fa.super-paypal-txn-verified,
+.fa.super-paypal-txn-unverified {
+    color: #2bc300;
+    font-size: 23px;
+    display: block;
+    float: left;
+    margin: -2px 10px 0px 0px;
+}
+.fa.super-paypal-txn-unverified {
+    color: #E40000;
+}
