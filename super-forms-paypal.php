@@ -228,10 +228,11 @@ if (!class_exists('SUPER_PayPal')):
 				// Actions since 1.0.0
 				add_action( 'admin_menu', array( $this, 'register_menu' ), 20 );
 				add_action( 'init', array( $this, 'update_plugin'));
-				add_action( 'all_admin_notices', array( $this, 'display_activation_msg' ) );
 				add_action( 'init', array( $this, 'custom_paypal_txn_status' ) );
 				add_action( 'admin_footer-post.php', array( $this, 'append_paypal_txn_status_list' ) );
 				add_action( 'manage_super_paypal_txn_posts_custom_column', array( $this, 'super_custom_columns' ), 10, 2 );
+                add_action( 'all_admin_notices', array( $this, 'display_activation_msg' ) );
+
 			}
 			if ($this->is_request('ajax')) {
 				// Actions since 1.0.0
@@ -246,7 +247,21 @@ if (!class_exists('SUPER_PayPal')):
 		 *  @since      1.0.0
 		 */
 		public function display_activation_msg(){
-			$sac = get_option('sac_' . $this->add_on_slug, 0);
+            if( !class_exists('SUPER_Forms') ) {
+                echo '<div class="notice notice-error">'; // notice-success
+                    echo '<p>';
+                    echo sprintf( 
+                        __( '%sPlease note:%s You must install and activate %4$s%1$sSuper Forms%2$s%5$s in order to be able to use %1$s%s%2$s!', 'super_forms' ), 
+                    	'<strong>', 
+                    	'</strong>', 
+                    	'Super Forms - ' . $this->add_on_name, 
+                    	'<a target="_blank" href="https://codecanyon.net/item/super-forms-drag-drop-form-builder/13979866">', 
+                    	'</a>' 
+                    );
+                    echo '</p>';
+                echo '</div>';
+            }
+            $sac = get_option('sac_' . $this->add_on_slug, 0);
 			if ($sac != 1) {
 				echo '<div class="notice notice-error">'; // notice-success
 				echo '<p>';
@@ -333,7 +348,7 @@ if (!class_exists('SUPER_PayPal')):
             $array['super-paypal-txn'] = array(
                 'src'     => $backend_path . 'paypal-txn.css',
                 'deps'    => '',
-                'version' => SUPER_VERSION,
+                'version' => $this->version,
                 'media'   => 'all',
                 'screen'  => array( 
                     'edit-super_paypal_txn',
