@@ -128,12 +128,14 @@ if (!class_exists('SUPER_PayPal')):
 			)
 		);
 
+
 		/**
 		 * @var SUPER_PayPal The single instance of the class
 		 *
 		 *  @since      1.0.0
 		 */
 		protected static $_instance = null;
+
 
 		/**
 		 * Main SUPER_PayPal Instance
@@ -153,6 +155,7 @@ if (!class_exists('SUPER_PayPal')):
 			return self::$_instance;
 		}
 
+
 		/**
 		 * SUPER_PayPal Constructor.
 		 *
@@ -162,6 +165,7 @@ if (!class_exists('SUPER_PayPal')):
 			$this->init_hooks();
 			do_action('super_paypal_loaded');
 		}
+
 
 		/**
 		 * Define constant if not already set
@@ -176,6 +180,7 @@ if (!class_exists('SUPER_PayPal')):
 				define($name, $value);
 			}
 		}
+
 
 		/**
 		 * What type of request is this?
@@ -198,6 +203,7 @@ if (!class_exists('SUPER_PayPal')):
 			}
 		}
 		
+
 		/**
 		 * Hook into actions and filters
 		 *
@@ -222,6 +228,7 @@ if (!class_exists('SUPER_PayPal')):
 				// Filters since 1.0.0
 				add_filter( 'super_settings_after_smtp_server_filter', array( $this, 'add_settings' ), 10, 2 );
 				add_filter( 'super_settings_end_filter', array( $this, 'activation' ), 100, 2 );
+				add_filter( 'post_row_actions', array( $this, 'remove_row_actions' ), 10, 1 );
 				add_filter( 'manage_super_paypal_txn_posts_columns', array( $this, 'super_paypal_txn_columns' ), 999999 );
 				add_filter( 'super_enqueue_styles', array( $this, 'backend_styles' ) );
 
@@ -365,6 +372,29 @@ if (!class_exists('SUPER_PayPal')):
 
 
 		/**
+		 * Change row actions
+		 *
+		 *  @since      1.0.0
+		 */
+		public static function remove_row_actions( $actions ) {
+		    if( get_post_type()==='super_paypal_txn' ) {
+		        if( isset( $actions['trash'] ) ) {
+		            $trash = $actions['trash'];
+		            unset( $actions['trash'] );
+		        }
+		        unset( $actions['inline hide-if-no-js'] );
+		        unset( $actions['view'] );
+		        unset( $actions['edit'] );
+		        $actions['view'] = '<a href="admin.php?page=super_paypal_txn&id=' . get_the_ID() . '">View</a>';
+		        if( isset( $trash ) ) {
+		            $actions['trash'] = $trash;
+		        }
+		    }
+		    return $actions;
+		}
+
+
+		/**
 		 * Custom transaction columns
 		 *
 		 *  @since      1.0.0
@@ -441,62 +471,15 @@ if (!class_exists('SUPER_PayPal')):
 					}
 			        break;
 			}
-			//var_dump($column);
-			/*
-			$contact_entry_data = get_post_meta($post_id, '_super_contact_entry_data');
-			if ($column == 'hidden_form_id') {
-				if (isset($contact_entry_data[0][$column])) {
-					$form_id = $contact_entry_data[0][$column]['value'];
-					$form_id = absint($form_id);
-					if ($form_id == 0) {
-						echo __( 'Unknown', 'super-forms');
-					}
-					else {
-						$form = get_post($form_id);
-						if (isset($form->post_title)) {
-							echo '<a href="admin.php?page=super_create_form&id=' . $form->ID . '">' . $form->post_title . '</a>';
-						}
-						else {
-							echo __( 'Unknown', 'super-forms');
-						}
-					}
-				}
-			}
-			elseif ($column == 'entry_status') {
-				$entry_status = get_post_meta($post_id, '_super_contact_entry_status', true);
-				$statuses = $GLOBALS['backend_contact_entry_status'];
-				if ((isset($statuses[$entry_status])) && ($entry_status != '')) {
-					echo '<span class="super-entry-status super-entry-status-' . $entry_status . '" style="color:' . $statuses[$entry_status]['color'] . ';background-color:' . $statuses[$entry_status]['bg_color'] . '">' . $statuses[$entry_status]['name'] . '</span>';
-				}
-				else {
-					$post_status = get_post_status($post_id);
-					if ($post_status == 'super_read') {
-						echo '<span class="super-entry-status super-entry-status-' . $post_status . '" style="background-color:#d6d6d6;">' . __( 'Read', 'super-forms') . '</span>';
-					}
-					else {
-						echo '<span class="super-entry-status super-entry-status-' . $post_status . '">' . __( 'Unread', 'super-forms') . '</span>';
-					}
-				}
-			}
-			elseif ($column == 'contact_entry_ip') {
-				$entry_ip = get_post_meta($post_id, '_super_contact_entry_ip', true);
-				echo $entry_ip . ' [<a href="http://whois.domaintools.com/' . $entry_ip . '" target="_blank">Whois</a>]';
-			}
-			else {
-				if (isset($contact_entry_data[0][$column])) {
-					echo $contact_entry_data[0][$column]['value'];
-				}
-			}
-			*/
 		}
+
+
 		/**
 		 * Register post statuses (payment statuses) for paypal transactions
 		 *
 		 *  @since      1.0.0
 		 */
-		public static function custom_paypal_txn_status()
-
-		{
+		public static function custom_paypal_txn_status() {
 			foreach(self::$paypal_payment_statuses as $k => $v) {
 				register_post_status($k, array(
 					'label' => $v['label'],
@@ -508,9 +491,7 @@ if (!class_exists('SUPER_PayPal')):
 				));
 			}
 		}
-		public static function append_paypal_txn_status_list()
-
-		{
+		public static function append_paypal_txn_status_list() {
 			global $post;
 			$complete = '';
 			$label = '';
@@ -521,22 +502,22 @@ if (!class_exists('SUPER_PayPal')):
 						$label = '<span id="post-status-display"> ' . $v['label'] . '</span>';
 					}
 					echo '<script>
-										jQuery(document).ready(function($){
-										$("select#post_status").append("<option value="archive" ' . $complete . '>Archive</option>");
-										$(".misc-pub-section label").append("' . $label . '");
-										});
-										</script>';
+					jQuery(document).ready(function($){
+					$("select#post_status").append("<option value="archive" ' . $complete . '>Archive</option>");
+					$(".misc-pub-section label").append("' . $label . '");
+					});
+					</script>';
 				}
 			}
 		}
+
+
 		/**
 		 *  Register PayPal transaction post types
 		 *
 		 *  @since    1.0.0
 		 */
-		public static function register_post_types()
-
-		{
+		public static function register_post_types() {
 			if (!post_type_exists('super_paypal_txn')) {
 				register_post_type('super_paypal_txn', apply_filters('super_register_post_type_super_paypal_txn', array(
 					'label' => 'PayPal Transactions',
@@ -576,37 +557,163 @@ if (!class_exists('SUPER_PayPal')):
 				)));
 			}
 		}
+		
+
 		/**
 		 *  Add menu items
 		 *
 		 *  @since    1.0.0
 		 */
-		public static function register_menu()
-
-		{
+		public static function register_menu() {
 			global $menu, $submenu;
-			add_submenu_page('super_forms', __( 'PayPal Transactions', 'super-forms' ), __( 'PayPal Transactions', 'super-forms' ), 'manage_options', 'edit.php?post_type=super_paypal_txn');
-			add_submenu_page(null, __( 'View PayPal transaction', 'super-forms' ), __( 'View PayPal transaction', 'super-forms' ), 'manage_options', 'super_paypal_txn', 'SUPER_PayPal_Pages::paypal_transaction');
-			add_submenu_page(null, __( 'PayPal transactions', 'super-forms' ), __( 'PayPal transactions', 'super-forms' ), 'manage_options', 'super_paypal_txns', 'SUPER_PayPal_Pages::paypal_transactions');
+			add_submenu_page(
+				'super_forms', 
+				__( 'PayPal Transactions', 'super-forms' ),
+				 __( 'PayPal Transactions', 'super-forms' ), 
+				 'manage_options', 
+				 'edit.php?post_type=super_paypal_txn'
+			);
+			add_submenu_page(
+				null, 
+				__( 'View PayPal transaction', 'super-forms' ), 
+				__( 'View PayPal transaction', 'super-forms' ), 
+				'manage_options', 
+				'super_paypal_txn', 
+				'SUPER_PayPal::paypal_transaction'
+			);
+			add_submenu_page(
+				null, 
+				__( 'PayPal transactions', 'super-forms' ), 
+				__( 'PayPal transactions', 'super-forms' ), 
+				'manage_options', 
+				'super_paypal_txns', 
+				'SUPER_PayPal::paypal_transactions'
+			);
 		}
+
+
+	    /**
+	     * Handles the output for the view paypal transaction page in admin
+	     */
+	    public static function paypal_transaction() {
+	        $id = $_GET['id'];
+	        $date = get_the_date(false,$id);
+	        $time = get_the_time(false,$id);
+			$txn_data = get_post_meta( $id, '_super_txn_data', true );
+			$custom = explode( '|', $txn_data['custom'] );
+			?>
+	        <script>
+	            jQuery('.toplevel_page_super_forms').removeClass('wp-not-current-submenu').addClass('wp-menu-open wp-has-current-submenu');
+	            jQuery('.toplevel_page_super_forms').find('a[href$="super_paypal_txn"]').parents('li:eq(0)').addClass('current');
+	        </script>
+	        <div class="wrap">
+	            <div id="poststuff">
+	                <div id="post-body" class="metabox-holder columns-2">
+	                    <div id="postbox-container-1" class="postbox-container">
+	                        <div id="side-sortables" class="meta-box-sortables ui-sortable">
+	                            <div id="submitdiv" class="postbox ">
+	                                <div class="handlediv" title="">
+	                                    <br>
+	                                </div>
+	                                <h3 class="hndle ui-sortable-handle">
+	                                    <span><?php echo __('Transaction Details', 'super-forms' ); ?>:</span>
+	                                </h3>
+	                                <div class="inside">
+	                                    <div class="submitbox" id="submitpost">
+	                                        <div id="minor-publishing">
+	                                            <div class="misc-pub-section">
+	                                                <span><?php echo __( 'Transaction ID', 'super-forms' ) . ':'; ?> <strong><?php echo get_the_title($id); ?></strong></span>
+	                                            </div>
+												<div class="misc-pub-section">
+	                                                <span><?php echo __( 'Status', 'super-forms' ) . ':'; ?> <strong><?php echo $txn_data['payment_status']; ?></strong></span>
+	                                            </div>
+												<div class="misc-pub-section">
+	                                                <span><?php echo __( 'Payer E-mail', 'super-forms' ) . ':'; ?> <strong><?php echo $txn_data['payer_email']; ?></strong></span>
+	                                            </div>
+	                                            <div class="misc-pub-section">
+	                                                <span><?php echo __( 'Payment type', 'super-forms' ) . ':'; ?> <strong><?php echo $txn_data['payment_type']; ?></strong></span>
+	                                            </div>
+												<div class="misc-pub-section">
+	                                                <span><?php echo __('Submitted', 'super-forms' ) . ':'; ?> <strong><?php echo $date.' @ '.$time; ?></strong></span>
+	                                            </div>
+												<div class="misc-pub-section">
+	                                                <span><?php echo __('Based on Form', 'super-forms' ) . ':'; ?> <strong><?php echo '<a href="admin.php?page=super_create_form&id=' . $custom[0] . '">' . get_the_title( $custom[0] ) . '</a>'; ?></strong></span>
+	                                            </div>
+
+	                                            <div class="clear"></div>
+	                                        </div>
+
+	                                        <div id="major-publishing-actions">
+	                                            <div id="delete-action">
+	                                                <a class="submitdelete super-delete-contact-entry" data-contact-entry="<?php echo absint($id); ?>" href="#"><?php echo __('Move to Trash', 'super-forms' ); ?></a>
+	                                            </div>
+	                                            <div id="publishing-action">
+	                                                <span class="spinner"></span>
+	                                                <input name="print" type="submit" class="super-print-contact-entry button button-large" value="<?php echo __('Print', 'super-forms' ); ?>">
+	                                                <input name="save" type="submit" class="super-update-contact-entry button button-primary button-large" data-contact-entry="<?php echo absint($id); ?>" value="<?php echo __('Update', 'super-forms' ); ?>">
+	                                            </div>
+	                                            <div class="clear"></div>
+	                                        </div>
+	                                    </div>
+
+	                                </div>
+	                            </div>
+	                        </div>
+	                    </div>
+	                    
+	                    <div id="postbox-container-2" class="postbox-container">
+	                        <div id="normal-sortables" class="meta-box-sortables ui-sortable">
+	                            <div id="super-contact-entry-data" class="postbox ">
+	                                <div class="handlediv" title="">
+	                                    <br>
+	                                </div>
+	                                <h3 class="hndle ui-sortable-handle">
+	                                    <span><?php echo __('Transaction Data', 'super-forms' ); ?>:</span>
+	                                </h3>
+	                                <div class="inside">
+	                                    <?php
+	                                    echo '<table>';
+                                            foreach( $txn_data as $k => $v ) {
+                                                echo '<tr><th align="right">' . $k . '</th><td>' . $v . '</td></tr>';
+                                            }
+	                                        echo apply_filters( 'super_after_paypal_txn_data_filter', '', array( 'paypal_txn_id'=>$_GET['id'], 'txn_data'=>$txn_data ) );
+	                                    echo '</table>';
+	                                    ?>
+	                                </div>
+	                            </div>
+	                        </div>
+	                        <div id="advanced-sortables" class="meta-box-sortables ui-sortable"></div>
+	                    </div>
+	                </div>
+	                <!-- /post-body -->
+	                <br class="clear">
+	            </div>
+	        <?php
+	    }
+
+
 		/**
 		 * PayPal IPN
 		 *
 		 * @since       1.0.0
 		 */
-		public function paypal_ipn()
-
-		{
+		public function paypal_ipn() {
 			if ((isset($_GET['page'])) && ($_GET['page'] == 'super_paypal_ipn')) {
+				
+				update_option('super_ipn_log_test', 1);
+
 				// if( isset( $_POST['txn_id'] ) ) {
 				// First retrieve the form settings
 				if (!isset($_POST['custom'])) $_POST['custom'] = '29843|product|29893|1';
 				$custom = explode('|', $_POST['custom']);
 				$form_id = $custom[0];
+				update_option('super_ipn_log_test', 2);
 				if (!$form_id) return;
 				if (absint($form_id) == 0) return;
+				update_option('super_ipn_log_test', 3);
 				$settings = get_post_meta(absint($form_id), '_super_form_settings', true);
 				if (!is_array($settings)) return;
+				update_option('super_ipn_log_test', 4);
 				// Check the receiver email to see if it matches your list of paypal email addresses
 				$merchant_emails = explode(',', $settings['paypal_merchant_email']);
 				$email_found = false;
@@ -617,6 +724,7 @@ if (!class_exists('SUPER_PayPal')):
 					}
 				}
 				if ($email_found == false) return;
+				update_option('super_ipn_log_test', 5);
 				// Set endpoint URL to post the verification data to
 				if (!isset($settings['paypal_mode'])) $settings['paypal_mode'] = 'sandbox';
 				$url = 'https://www.' . ($settings['paypal_mode'] == 'sandbox' ? 'sandbox.' : '') . 'paypal.com/cgi-bin/webscr';
@@ -636,11 +744,13 @@ if (!class_exists('SUPER_PayPal')):
 						$myPost[$keyval[0]] = urldecode($keyval[1]);
 					}
 				}
+				update_option('super_ipn_log_test', 6);
 				$req = 'cmd=_notify-validate';
 				$get_magic_quotes_exists = false;
 				if (function_exists('get_magic_quotes_gpc')) {
 					$get_magic_quotes_exists = true;
 				}
+				update_option('super_ipn_log_test', 7);
 				foreach($myPost as $key => $value) {
 					if ($get_magic_quotes_exists == true && get_magic_quotes_gpc() == 1) {
 						$value = urlencode(stripslashes($value));
@@ -651,6 +761,7 @@ if (!class_exists('SUPER_PayPal')):
 					$req.= "&$key=$value";
 				}
 				// Post the data back to PayPal.
+				update_option('super_ipn_log_test', 8);
 				$http = new WP_Http();
 				$response = $http->post($url, array(
 					'sslverify' => false,
@@ -663,6 +774,7 @@ if (!class_exists('SUPER_PayPal')):
 					update_option('super_ipn_error_log_' . $form_id . '_' . time(), "PayPal responded with http code $http_code");
 					throw new Exception("PayPal responded with http code $http_code");
 				}
+				update_option('super_ipn_log_test', 9);
 				// Log IPN data
 				update_option('super_ipn_log_' . $form_id . '_' . time(), ($_POST));
 				// Check if PayPal verifies the IPN data, and if so, return true.
@@ -816,14 +928,14 @@ if (!class_exists('SUPER_PayPal')):
 			// Reply with an empty 200 response to indicate to paypal the IPN was received correctly.
 			header("HTTP/1.1 200 OK");
 		}
+
+
 		/**
 		 * Add the WC Order link to the entry info/data page
 		 *
 		 * @since       1.0.0
 		 */
-		public static function add_entry_order_link($result, $data)
-
-		{
+		public static function add_entry_order_link($result, $data) {
 			$order_id = get_post_meta($data['entry_id'], '_super_contact_entry_wc_order_id', true);
 			if (!empty($order_id)) {
 				$order_id = absint($order_id);
@@ -835,13 +947,14 @@ if (!class_exists('SUPER_PayPal')):
 			}
 			return $result;
 		}
+
+
 		/**
 		 * If Front-end posting add-on is activated and being used retrieve the inserted Post ID and save it to the PayPal Order
 		 *
 		 *  @since      1.0.0
 		 */
-		function save_wc_order_post_session_data($data)
-		{
+		function save_wc_order_post_session_data($data){
 			global $paypal;
 			// Check if Front-end Posting add-on is activated
 			if (class_exists('SUPER_Frontend_Posting')) {
@@ -861,13 +974,14 @@ if (!class_exists('SUPER_PayPal')):
 				$paypal->session->set('_super_wc_post', array());
 			}
 		}
+
+
 		/**
 		 * If Register & Login add-on is activated and being used retrieve the created User ID and save it to the PayPal Order
 		 *
 		 *  @since      1.0.0
 		 */
-		function save_wc_order_signup_session_data($data)
-		{
+		function save_wc_order_signup_session_data($data){
 			global $paypal;
 			// Check if Register & Login add-on is activated
 			if (class_exists('SUPER_Register_Login')) {
@@ -887,14 +1001,14 @@ if (!class_exists('SUPER_PayPal')):
 				$paypal->session->set('_super_wc_signup', array());
 			}
 		}
+
+
 		/**
 		 * Set the post ID and status to the order post_meta so we can update it after payment completed
 		 *
 		 * @since       1.0.0
 		 */
-		public static function update_order_meta($order_id)
-
-		{
+		public static function update_order_meta($order_id) {
 			// @since 1.0.0 - save the custom fields to the order, so we can retrieve it in back-end for later use
 			$custom_fields = SUPER_Forms()->session->get('_super_wc_custom_fields');
 			update_post_meta($order_id, '_super_wc_custom_fields', $custom_fields);
@@ -914,14 +1028,14 @@ if (!class_exists('SUPER_PayPal')):
 			$_super_entry_id = $paypal->session->get('_super_entry_id', array());
 			update_post_meta($_super_entry_id['entry_id'], '_super_contact_entry_wc_order_id', $order_id);
 		}
+
+
 		/**
 		 * Hook into before sending email and check if we need to create or update a post or taxonomy
 		 *
 		 *  @since      1.0.0
 		 */
-		public static function before_email_success_msg($atts)
-
-		{
+		public static function before_email_success_msg($atts) {
 			$settings = $atts['settings'];
 			if (isset($atts['data'])) {
 				$data = $atts['data'];
@@ -1018,7 +1132,23 @@ if (!class_exists('SUPER_PayPal')):
 				// $action = 'http://f4d.nl/dev/?page=super_paypal_ipn'; // For local testing
 				$action = 'https://www.' . ($settings['paypal_mode'] == 'sandbox' ? 'sandbox.' : '') . 'paypal.com/cgi-bin/webscr';
 				$message = '';
-				$message.= '<form id="super_paypal_' . $atts['post']['form_id'] . '" action="' . $action . '" method="post">';
+
+				$message.= '<form target="_self" id="super_paypal_' . $atts['post']['form_id'] . '" action="' . $action . '" method="post">';
+
+				// If continue shopping is enabled (e.g: custom URL redirect is enabled for the form)
+	            if( !empty( $settings['form_redirect_option'] ) ) {
+	                $redirect = null;
+	                if( $settings['form_redirect_option']=='page' ) {
+	                    $redirect = get_permalink( $settings['form_redirect_page'] );
+	                }
+	                if( $settings['form_redirect_option']=='custom' ) {
+	                    $redirect = SUPER_Common::email_tags( $settings['form_redirect'], $data, $settings );
+	                }
+	                if($redirect!=null){
+	                	$message .= '<input type="hidden" name="shopping_url" value="' . esc_url($redirect) . '">';
+	                }
+	            }
+
 				$message.= '<input type="hidden" name="cmd" value="' . $cmd . '">';
 				$message.= '<input type="hidden" name="charset" value="UTF-8">';
 				$message.= '<input type="hidden" name="business" value="' . esc_attr($settings['paypal_merchant_email']) . '">';
@@ -1079,12 +1209,15 @@ if (!class_exists('SUPER_PayPal')):
 				}
 				if ($cmd == '_cart') {
 					$message.= '<input type="hidden" name="upload" value="1">';
+
 					$message.= '<input type="hidden" name="item_name_1" value="beach ball">';
 					$message.= '<input type="hidden" name="amount_1" value="15">';
 					$message.= '<input type="hidden" name="quantity_1" value="2">';
+
 					$message.= '<input type="hidden" name="item_name_2" value="towel">';
 					$message.= '<input type="hidden" name="amount_2" value="25">';
 					$message.= '<input type="hidden" name="quantity_2" value="3">';
+
 				}
 				if ($cmd == '_xclick-subscriptions') {
 					$message.= '<input type="hidden" name="item_name" value="Alice\'s Weekly Digest">';
@@ -1158,14 +1291,14 @@ if (!class_exists('SUPER_PayPal')):
 				SUPER_Common::output_error($error = false, $msg = $msg . $message, $redirect = false, $fields = array(), $display = true, $loading = true);
 			}
 		}
+
+
 		/**
 		 * Hook into settings and add PayPal settings
 		 *
 		 *  @since      1.0.0
 		 */
-		public static function add_settings($array, $settings)
-
-		{
+		public static function add_settings($array, $settings) {
 			$statuses = SUPER_Settings::get_entry_statuses();
 			$new_statuses = array();
 			foreach($statuses as $k => $v) {
@@ -1555,14 +1688,16 @@ if (!class_exists('SUPER_PayPal')):
 		}
 	}
 endif;
+
+
 /**
  * Returns the main instance of SUPER_PayPal to prevent the need to use globals.
  *
  * @return SUPER_PayPal
  */
-function SUPER_PayPal()
-{
+function SUPER_PayPal() {
 	return SUPER_PayPal::instance();
 }
+
 // Global for backwards compatibility.
 $GLOBALS['SUPER_PayPal'] = SUPER_PayPal();
