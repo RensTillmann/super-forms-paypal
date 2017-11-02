@@ -426,6 +426,19 @@ if (!class_exists('SUPER_PayPal')):
 		public static function super_custom_columns($column, $post_id) {
 			$txn_data = get_post_meta( $post_id, '_super_txn_data', true );
 			$custom = explode( '|', $txn_data['custom'] );
+
+
+
+			/*
+			txn_type
+			subscr_signup
+			subscr_cancel
+			subscr_modify
+			subscr_payment
+			subscr_failed
+			subscr_eot
+			*/
+
 			switch ($column) {
 			    case 'pp_status':
 			        $entry_status = $txn_data['payment_status'];
@@ -447,10 +460,19 @@ if (!class_exists('SUPER_PayPal')):
 			        echo $txn_data['payer_email'];
 			        break;
 			    case 'pp_invoice':
-			        echo $txn_data['invoice'];
+			        echo (isset($txn_data['invoice']) ? $txn_data['invoice'] : '');
 			        break;
 			    case 'pp_item':
-			        echo $txn_data['item_name'] . ' — ' . $txn_data['quantity'] . 'x';
+
+			    	if($txn_data['txn_type']=='cart'){
+			        	$i=1;
+			        	while( isset($txn_data['item_name'.$i]) ) {
+			        		echo $txn_data['quantity'.$i] . 'x — <strong>' . $txn_data['item_name'.$i] . '</strong><br />';
+			        		$i++;
+			        	}
+			    	}else{
+			        	echo $txn_data['quantity'] . 'x — <strong>' . $txn_data['item_name'] . '</strong>';
+			    	}
 			        break;
 			    case 'pp_name':
 			        echo $txn_data['first_name'] . ' ' . $txn_data['last_name'];
@@ -700,20 +722,15 @@ if (!class_exists('SUPER_PayPal')):
 		public function paypal_ipn() {
 			if ((isset($_GET['page'])) && ($_GET['page'] == 'super_paypal_ipn')) {
 				
-				update_option('super_ipn_log_test', 1);
-
 				// if( isset( $_POST['txn_id'] ) ) {
 				// First retrieve the form settings
 				if (!isset($_POST['custom'])) $_POST['custom'] = '29843|product|29893|1';
 				$custom = explode('|', $_POST['custom']);
 				$form_id = $custom[0];
-				update_option('super_ipn_log_test', 2);
 				if (!$form_id) return;
 				if (absint($form_id) == 0) return;
-				update_option('super_ipn_log_test', 3);
 				$settings = get_post_meta(absint($form_id), '_super_form_settings', true);
 				if (!is_array($settings)) return;
-				update_option('super_ipn_log_test', 4);
 				// Check the receiver email to see if it matches your list of paypal email addresses
 				$merchant_emails = explode(',', $settings['paypal_merchant_email']);
 				$email_found = false;
@@ -724,7 +741,6 @@ if (!class_exists('SUPER_PayPal')):
 					}
 				}
 				if ($email_found == false) return;
-				update_option('super_ipn_log_test', 5);
 				// Set endpoint URL to post the verification data to
 				if (!isset($settings['paypal_mode'])) $settings['paypal_mode'] = 'sandbox';
 				$url = 'https://www.' . ($settings['paypal_mode'] == 'sandbox' ? 'sandbox.' : '') . 'paypal.com/cgi-bin/webscr';
@@ -744,13 +760,11 @@ if (!class_exists('SUPER_PayPal')):
 						$myPost[$keyval[0]] = urldecode($keyval[1]);
 					}
 				}
-				update_option('super_ipn_log_test', 6);
 				$req = 'cmd=_notify-validate';
 				$get_magic_quotes_exists = false;
 				if (function_exists('get_magic_quotes_gpc')) {
 					$get_magic_quotes_exists = true;
 				}
-				update_option('super_ipn_log_test', 7);
 				foreach($myPost as $key => $value) {
 					if ($get_magic_quotes_exists == true && get_magic_quotes_gpc() == 1) {
 						$value = urlencode(stripslashes($value));
@@ -761,7 +775,6 @@ if (!class_exists('SUPER_PayPal')):
 					$req.= "&$key=$value";
 				}
 				// Post the data back to PayPal.
-				update_option('super_ipn_log_test', 8);
 				$http = new WP_Http();
 				$response = $http->post($url, array(
 					'sslverify' => false,
@@ -774,7 +787,6 @@ if (!class_exists('SUPER_PayPal')):
 					update_option('super_ipn_error_log_' . $form_id . '_' . time(), "PayPal responded with http code $http_code");
 					throw new Exception("PayPal responded with http code $http_code");
 				}
-				update_option('super_ipn_log_test', 9);
 				// Log IPN data
 				update_option('super_ipn_log_' . $form_id . '_' . time(), ($_POST));
 				// Check if PayPal verifies the IPN data, and if so, return true.
@@ -1172,12 +1184,13 @@ if (!class_exists('SUPER_PayPal')):
 				if ($settings['paypal_weight_unit'] != '') {
 					$message.= '<input type="hidden" name="weight_unit" value="' . $settings['paypal_weight_unit'] . '">';
 				}
+
 				if (($cmd == '_xclick') || ($cmd == '_donations')) {
 					if ($settings['paypal_item_name'] != '') {
-						$message.= '<input type="hidden" name="item_name" value="' . $settings['paypal_item_name'] . '">';
+						$message.= '<input type="hidden" name="item_name" value="' . esc_attr($settings['paypal_item_name']) . '">';
 					}
 					if ($settings['paypal_item_number'] != '') {
-						$message.= '<input type="hidden" name="item_number" value="' . $settings['paypal_item_number'] . '">';
+						$message.= '<input type="hidden" name="item_number" value="' . esc_attr($settings['paypal_item_number']) . '">';
 					}
 					if ($settings['paypal_item_quantity'] != '') {
 						$message.= '<input type="hidden" name="quantity" value="' . $settings['paypal_item_quantity'] . '">';
@@ -1207,21 +1220,32 @@ if (!class_exists('SUPER_PayPal')):
 					}
 					$message.= '<input type="hidden" name="amount" value="' . $settings['paypal_item_amount'] . '">';
 				}
+
+				// Cart checkout
 				if ($cmd == '_cart') {
 					$message.= '<input type="hidden" name="upload" value="1">';
 
-					$message.= '<input type="hidden" name="item_name_1" value="beach ball">';
+					$message.= '<input type="hidden" name="item_name_1" value="Beach ball">';
 					$message.= '<input type="hidden" name="amount_1" value="15">';
 					$message.= '<input type="hidden" name="quantity_1" value="2">';
 
-					$message.= '<input type="hidden" name="item_name_2" value="towel">';
+					$message.= '<input type="hidden" name="item_name_2" value="Towel">';
 					$message.= '<input type="hidden" name="amount_2" value="25">';
 					$message.= '<input type="hidden" name="quantity_2" value="3">';
 
 				}
+
+				// Subscriptions checkout
 				if ($cmd == '_xclick-subscriptions') {
-					$message.= '<input type="hidden" name="item_name" value="Alice\'s Weekly Digest">';
-					$message.= '<input type="hidden" name="item_number" value="DIG Weekly">';
+					if ($settings['paypal_item_name'] != '') {
+						// e.g: Alice\'s Weekly Digest
+						$message .= '<input type="hidden" name="item_name" value="' . esc_attr($settings['paypal_item_name']) . '">';
+					}
+					if ($settings['paypal_item_number'] != '') {
+						// e.g: DIG Weekly
+						$message .= '<input type="hidden" name="item_number" value="' . esc_attr($settings['paypal_item_number']) . '">';
+					}
+
 					// a1 - the price of the subscription e.g: 5.00
 					// p1 - the period of the subscription e.g: 7 (for 7 days if t1 has value of D)
 					// t1 - the time format for the period e.g: D=days, W=weeks, M=months, Y=years
@@ -1374,7 +1398,7 @@ if (!class_exists('SUPER_PayPal')):
 						'type' => 'text',
 						'filter' => true,
 						'parent' => 'paypal_payment_type',
-						'filter_value' => 'product,donation',
+						'filter_value' => 'product,donation,subscription',
 					),
 					'paypal_item_amount' => array(
 						'name' => __( 'Item price (leave blank to let user enter their own price)', 'super-forms' ),
