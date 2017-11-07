@@ -11,23 +11,24 @@
     font-size:12px;
     cursor: default;
 }
-.super-txn-status-Completed,
-.super-txn-status-Canceled_Reversal,
-.super-txn-status-Processed {
+.super-txn-status-completed,
+.super-txn-status-canceled_reversal,
+.super-txn-status-processed {
     background-color: #2BC300;
 }
-.super-txn-status-Created,
-.super-txn-status-Pending {
+.super-txn-status-created,
+.super-txn-status-pending {
     background-color: #FF7700;
 }
-.super-txn-status-Refunded,
-.super-txn-status-Reversed,
-.super-txn-status-Denied,
-.super-txn-status-Expired,
-.super-txn-status-Failed {
+.super-txn-status-refunded,
+.super-txn-status-reversed,
+.super-txn-status-denied,
+.super-txn-status-expired,
+.super-txn-status-failed,
+.super-txn-status-suspended {
     background-color: #E40000;
 }
-.super-txn-status-Voided {
+.super-txn-status-voided {
     background-color: #000000;
 }
 .fa.super-paypal-txn-verified,
@@ -40,4 +41,18 @@
 }
 .fa.super-paypal-txn-unverified {
     color: #E40000;
+}
+.pp-name-email {
+    position:relative;
+    width:100%;
+    float:left;
+    padding-left:30px;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+.pp-name-email > i {
+    position:absolute;
+    left:0px;
+    top:5px;
 }
