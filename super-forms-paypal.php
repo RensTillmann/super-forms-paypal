@@ -214,11 +214,11 @@ if (!class_exists('SUPER_PayPal')):
 			// Filters since 1.0.0
 			register_deactivation_hook( __FILE__, array( $this, 'deactivate'));
 			add_filter( 'super_after_activation_message_filter', array( $this, 'activation_message' ), 10, 2 );
-			add_filter( 'super_after_contact_entry_data_filter', array( $this, 'add_entry_order_link' ), 10, 2 );
+			//add_filter( 'super_after_contact_entry_data_filter', array( $this, 'add_entry_order_link' ), 10, 2 );
 			
 			// Actions since 1.0.0
 			add_action( 'init', array( $this, 'register_post_types' ), 5 );
-			add_action( 'super_front_end_posting_after_insert_post_action', array( $this, 'save_wc_order_post_session_data' ) );
+			//add_action( 'super_front_end_posting_after_insert_post_action', array( $this, 'save_wc_order_post_session_data' ) );
 			add_action( 'super_after_wp_insert_user_action', array( $this, 'save_wc_order_signup_session_data'));
 			add_action( 'paypal_checkout_update_order_meta', array( $this, 'update_order_meta' ), 10, 1 );
 			add_action( 'parse_request', array( $this, 'paypal_ipn'));
@@ -492,7 +492,6 @@ if (!class_exists('SUPER_PayPal')):
 				        }
 						echo '<span title="' . esc_attr($entry_status) . '" class="super-txn-status super-txn-status-' . strtolower($entry_status) . '">' . $entry_status . '</span>';
 			    	}else{
-			    		var_dump($txn_data);
 				        $entry_status = $txn_data['payment_status'];
 				        $value = self::$paypal_payment_statuses[$entry_status];
 				        $statuses = $GLOBALS['backend_contact_entry_status'];
@@ -552,6 +551,44 @@ if (!class_exists('SUPER_PayPal')):
 							}
 							if( isset($txn_data['period3']) ) {
 								$payment_cycle = $txn_data['period3'];
+								$payment_cycle = explode(" ", $payment_cycle);
+								if( $payment_cycle[0]>1 ) {
+									switch( $payment_cycle[1] ) {
+										case 'D':
+											$payment_cycle = 'Every ' . $payment_cycle[0] . ' days';
+										break;
+
+										case 'W':
+											$payment_cycle = 'Every ' . $payment_cycle[0] . ' weeks';
+										break;
+
+										case 'M':
+											$payment_cycle = 'Every ' . $payment_cycle[0] . ' months';
+										break;
+
+										case 'Y':
+											$payment_cycle = 'Every ' . $payment_cycle[0] . ' years';
+										break;
+									}
+								}else{
+									switch( $payment_cycle[1] ) {
+										case 'D':
+											$payment_cycle = 'Daily';
+										break;
+
+										case 'W':
+											$payment_cycle = 'Weekly';
+										break;
+
+										case 'M':
+											$payment_cycle = 'Monthly';
+										break;
+
+										case 'Y':
+											$payment_cycle = 'Yearly';
+										break;
+									}
+								}
 							}
 
 							// Get amount per cycle
