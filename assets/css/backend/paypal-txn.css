@@ -11,6 +11,7 @@
     font-size:12px;
     cursor: default;
 }
+.super-txn-status-active,
 .super-txn-status-completed,
 .super-txn-status-canceled_reversal,
 .super-txn-status-processed {
