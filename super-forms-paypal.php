@@ -242,10 +242,28 @@ if (!class_exists('SUPER_PayPal')):
 				add_action( 'manage_super_paypal_sub_posts_custom_column', array( $this, 'super_custom_columns' ), 10, 2 );
                 add_action( 'all_admin_notices', array( $this, 'display_activation_msg' ) );
 
+				add_action( 'current_screen', array( $this, 'reset_paypal_counter' ) );
+
+
 			}
 			if ($this->is_request('ajax')) {
 				// Actions since 1.0.0
 				add_action( 'super_before_email_success_msg_action', array( $this, 'before_email_success_msg' ) );
+			}
+		}
+
+
+		/**
+		 * Display activation message for automatic updates
+		 *
+		 *  @since      1.0.0
+		 */
+		public function reset_paypal_counter($current_screen){
+			if($current_screen->post_type == 'super_paypal_txn'){
+				update_option( 'super_paypal_txn_count', 0 );
+			}
+			if($current_screen->post_type == 'super_paypal_sub'){
+				update_option( 'super_paypal_sub_count', 0 );
 			}
 		}
 
@@ -422,7 +440,7 @@ if (!class_exists('SUPER_PayPal')):
 			$columns['pp_status'] = 'Payment status'; // payment_status
 			$columns['pp_payer_email'] = 'E-mail'; // payer_email
 			$columns['pp_invoice'] = 'Invoice'; // invoice
-			$columns['pp_item'] = 'Item — Quantity'; // item_name + quantity
+			$columns['pp_item'] = 'Quantity — Item'; // item_name + quantity
 			$columns['pp_hidden_form_id'] = 'Based on Form'; // hidden_form_id
 			$columns['date'] = 'Date'; // payment_date
 			return $columns;
@@ -452,9 +470,9 @@ if (!class_exists('SUPER_PayPal')):
 			$columns['pp_status'] = 'Status'; // payment_status
 			$columns['pp_payer_email'] = 'Name / E-mail'; // first_name + last_name / payer_email
 			$columns['pp_invoice'] = 'Invoice'; // invoice
-			$columns['pp_item'] = 'Item'; // item_name + quantity
-			$columns['pp_initial_payment'] = 'Initial Payment'; // a1,t1,p1 / a2,t2,p2
-			$columns['pp_trial_period'] = 'Trial period'; // a1,t1,p1 / a2,t2,p2
+			$columns['pp_item'] = 'Recurring Payment'; // item_name + quantity
+			$columns['pp_initial_payment'] = 'Trial Period'; // a1,t1,p1 / a2,t2,p2
+			$columns['pp_trial_period'] = 'Trial Period 2'; // a1,t1,p1 / a2,t2,p2
 			$columns['pp_hidden_form_id'] = 'Based on Form'; // hidden_form_id
 			$columns['date'] = 'Date'; // payment_date
 			return $columns;
@@ -464,21 +482,120 @@ if (!class_exists('SUPER_PayPal')):
 
 		}
 
-		
+		public function get_amount_per_cycle($txn_data){
+			if( isset($txn_data['amount_per_cycle']) ) return $txn_data['amount_per_cycle'];
+			if( isset($txn_data['mc_amount3']) ) return $txn_data['mc_amount3'];
+		}
+		public function get_currency_code($txn_data){
+			if( isset($txn_data['currency_code']) ) return $txn_data['currency_code'];
+			if( isset($txn_data['mc_currency']) ) return $txn_data['mc_currency'];
+		}
+		public function get_product_item_name($txn_data){
+			if( isset($txn_data['item_name']) ) return $txn_data['item_name'];
+			if( isset($txn_data['product_name']) ) return $txn_data['product_name'];
+		}
+		public function get_payment_cycle($txn_data, $period=3){
+			$payment_cycle = '';
+			if( isset($txn_data['payment_cycle']) ) {
+				$payment_cycle = $txn_data['payment_cycle'];
+			}
+			if( isset($txn_data['period'.$period]) ) {
+				$payment_cycle = $txn_data['period'.$period];
+				$payment_cycle = explode(" ", $payment_cycle);
 
+				if( $period>2 ) {
+					if( $payment_cycle[0]>1 ) {
+						switch( $payment_cycle[1] ) {
+							case 'D':
+								$payment_cycle = 'Every ' . $payment_cycle[0] . ' days';
+							break;
+
+							case 'W':
+								$payment_cycle = 'Every ' . $payment_cycle[0] . ' weeks';
+							break;
+
+							case 'M':
+								$payment_cycle = 'Every ' . $payment_cycle[0] . ' months';
+							break;
+
+							case 'Y':
+								$payment_cycle = 'Every ' . $payment_cycle[0] . ' years';
+							break;
+						}
+					}else{
+						switch( $payment_cycle[1] ) {
+							case 'D':
+								$payment_cycle = 'Daily';
+							break;
+
+							case 'W':
+								$payment_cycle = 'Weekly';
+							break;
+
+							case 'M':
+								$payment_cycle = 'Monthly';
+							break;
+
+							case 'Y':
+								$payment_cycle = 'Yearly';
+							break;
+						}
+					}
+				}else{
+					if( $payment_cycle[0]>1 ) {
+						switch( $payment_cycle[1] ) {
+							case 'D':
+								$payment_cycle = $payment_cycle[0] . ' days';
+							break;
+
+							case 'W':
+								$payment_cycle = $payment_cycle[0] . ' weeks';
+							break;
+
+							case 'M':
+								$payment_cycle = $payment_cycle[0] . ' months';
+							break;
+
+							case 'Y':
+								$payment_cycle = $payment_cycle[0] . ' years';
+							break;
+						}
+					}else{
+						switch( $payment_cycle[1] ) {
+							case 'D':
+								$payment_cycle = '1 day';
+							break;
+
+							case 'W':
+								$payment_cycle = '1 week';
+							break;
+
+							case 'M':
+								$payment_cycle = '1 month';
+							break;
+
+							case 'Y':
+								$payment_cycle = '1 year';
+							break;
+						}
+					}
+				}
+			}
+			return $payment_cycle;
+		}
 		public static function super_custom_columns($column, $post_id) {
 			$txn_data = get_post_meta( $post_id, '_super_txn_data', true );
 			$custom = explode( '|', $txn_data['custom'] );
 
-			/*
-			txn_type
-			subscr_signup
-			subscr_cancel
-			subscr_modify
-			subscr_payment
-			subscr_failed
-			subscr_eot
-			*/
+			// Get currency code e.g: EUR
+			$currency_code = $this->get_currency_code($txn_data);
+			$symbol = self::$currency_codes[$currency_code]['symbol'];
+
+			// Get product/item name
+			$product_name = $this->get_product_item_name($txn_data);
+
+			// Get amount per cycle
+			$amount_per_cycle = $this->get_amount_per_cycle($txn_data);
 
 			switch ($column) {
 			    case 'pp_status':
@@ -486,11 +603,16 @@ if (!class_exists('SUPER_PayPal')):
 				        $entry_status = 'Active';
 				        if( isset($txn_data['profile_status']) ) {
 				        	$entry_status = $txn_data['profile_status'];
+				        	$entry_status_desc = $entry_status;
+				        }
+				        if( $txn_data['txn_type']=='recurring_payment_suspended' ) {
+				        	$entry_status_desc = 'This profile has been suspended, and no further amounts will be collected.';				        
 				        }
 				        if( $txn_data['txn_type']=='subscr_cancel' ) {
 				        	$entry_status = 'Canceled';
+				        	$entry_status_desc = 'This recurring payment plan has been canceled and cannot be reactivated. No more recurring payments will be made.';
 				        }
-						echo '<span title="' . esc_attr($entry_status) . '" class="super-txn-status super-txn-status-' . strtolower($entry_status) . '">' . $entry_status . '</span>';
+						echo '<span title="' . esc_attr($entry_status_desc) . '" class="super-txn-status super-txn-status-' . strtolower($entry_status) . '">' . $entry_status . '</span>';
 			    	}else{
 				        $entry_status = $txn_data['payment_status'];
 				        $value = self::$paypal_payment_statuses[$entry_status];
@@ -527,99 +649,48 @@ if (!class_exists('SUPER_PayPal')):
 			        		$i++;
 			        	}
 			    	}else{
-			    		if( ($txn_data['txn_type']=='subscr_signup') || ($txn_data['txn_type']=='subscr_modify') || ($txn_data['txn_type']=='subscr_cancel') || ($txn_data['txn_type']=='recurring_payment_suspended') ) {
-						
-							// Get currency code e.g: EUR
-							if( isset($txn_data['currency_code']) ) {
-								$currency_code = $txn_data['currency_code'];
-							}
-							if( isset($txn_data['mc_currency']) ) {
-								$currency_code = $txn_data['mc_currency'];
-							}
-
-							// Get product/item name
-							if( isset($txn_data['item_name']) ) {
-								$product_name = $txn_data['item_name'];
-							}
-							if( isset($txn_data['product_name']) ) {
-								$product_name = $txn_data['product_name'];
-							}
-
-							// Get payment cycle
-							if( isset($txn_data['payment_cycle']) ) {
-								$payment_cycle = $txn_data['payment_cycle'];
-							}
-							if( isset($txn_data['period3']) ) {
-								$payment_cycle = $txn_data['period3'];
-								$payment_cycle = explode(" ", $payment_cycle);
-								if( $payment_cycle[0]>1 ) {
-									switch( $payment_cycle[1] ) {
-										case 'D':
-											$payment_cycle = 'Every ' . $payment_cycle[0] . ' days';
-										break;
-
-										case 'W':
-											$payment_cycle = 'Every ' . $payment_cycle[0] . ' weeks';
-										break;
-
-										case 'M':
-											$payment_cycle = 'Every ' . $payment_cycle[0] . ' months';
-										break;
-
-										case 'Y':
-											$payment_cycle = 'Every ' . $payment_cycle[0] . ' years';
-										break;
-									}
-								}else{
-									switch( $payment_cycle[1] ) {
-										case 'D':
-											$payment_cycle = 'Daily';
-										break;
-
-										case 'W':
-											$payment_cycle = 'Weekly';
-										break;
-
-										case 'M':
-											$payment_cycle = 'Monthly';
-										break;
-
-										case 'Y':
-											$payment_cycle = 'Yearly';
-										break;
-									}
-								}
-							}
-
-							// Get amount per cycle
-							if( isset($txn_data['amount_per_cycle']) ) {
-								$amount_per_cycle = $txn_data['amount_per_cycle'];
-							}
-							if( isset($txn_data['mc_amount3']) ) {
-								$amount_per_cycle = $txn_data['mc_amount3'];
-							}
-
-							$symbol = self::$currency_codes[$currency_code]['symbol'];
-			    			echo '<strong>' . $product_name . '</strong><br />';
-			    			echo '(' . $payment_cycle . ': ' . $symbol . number_format_i18n($amount_per_cycle, 2) . ' ' . $currency_code . ')';
+			    		if( ($txn_data['txn_type']=='subscr_payment') || ($txn_data['txn_type']=='subscr_signup') || ($txn_data['txn_type']=='subscr_modify') || ($txn_data['txn_type']=='subscr_cancel') || ($txn_data['txn_type']=='recurring_payment_suspended') ) {
+			    			if($txn_data['txn_type']=='subscr_payment'){
+			    				echo '1x — <strong>' . $txn_data['item_name'] . '</strong><br />';
+			    				echo '(' . $symbol . number_format_i18n($txn_data['mc_gross'], 2) . ' ' . $currency_code . ')';
+							}else{
+			    				echo '<strong>' . $product_name . '</strong><br />';
+								// Get payment cycle
+								$payment_cycle = $this->get_payment_cycle($txn_data, 3);
+			    				echo '(' . $payment_cycle . ': ' . $symbol . number_format_i18n($amount_per_cycle, 2) . ' ' . $currency_code . ')';
+			    			}
 			    		}else{
 				        	echo $txn_data['quantity'] . 'x — <strong>' . $txn_data['item_name'] . '</strong>';
 			    		}
 			    	}
 			        break;
 			    case 'pp_initial_payment':
+					if( isset($txn_data['mc_amount1']) ) {
+						// Get payment cycle
+						$payment_cycle = $this->get_payment_cycle($txn_data, 1);
+						echo '(' . $payment_cycle . ': ' . $symbol . number_format_i18n($txn_data['mc_amount1'], 2) . ' ' . $currency_code . ')';
+					}
+					/*
 					if( isset($txn_data['profile_status']) ) {
 				        echo '';
 				    }else{
 			    		echo '';
 				    }
+			        */
 			        break;
 			    case 'pp_trial_period':
+					if( isset($txn_data['mc_amount2']) ) {
+						// Get payment cycle
+						$payment_cycle = $this->get_payment_cycle($txn_data, 2);
+						echo '(' . $payment_cycle . ': ' . $symbol . number_format_i18n($txn_data['mc_amount2'], 2) . ' ' . $currency_code . ')';
+					}
+					/*
 					if( isset($txn_data['profile_status']) ) {
 				        echo '';
 				    }else{
-			    		echo '7 days $0';
+			    		echo '';
 				    }
+				    */
 			        break;
 			    case 'pp_hidden_form_id':
 			    	$form_id = absint($custom[0]);
@@ -769,14 +840,21 @@ if (!class_exists('SUPER_PayPal')):
 		 */
 		public static function register_menu() {
 			global $menu, $submenu;
+			$styles = 'background-image:url(' . plugin_dir_url( __FILE__ ) . 'assets/images/paypal.png);width:22px;height:22px;display:inline-block;background-position:-3px -3px;background-repeat:no-repeat;margin:0px 0px -9px 0px;';
 			
 			// Transactions menu
+			$count = get_option( 'super_paypal_txn_count', 5 );
+			if( $count>0 ) {
+				$count = ' <span class="update-plugins"><span class="plugin-count">' . $count . '</span></span>';
+			}else{
+				$count = '';
+			}
 			add_submenu_page(
 				'super_forms', 
 				__( 'PayPal Transactions', 'super-forms' ),
-				 __( 'PayPal Transactions', 'super-forms' ), 
-				 'manage_options', 
-				 'edit.php?post_type=super_paypal_txn'
+				'<span class="super-pp-icon" style="' . $styles . '"></span>' . __( 'Transactions', 'super-forms' ) . $count,
+				'manage_options', 
+				'edit.php?post_type=super_paypal_txn'
 			);
 			add_submenu_page(
 				null, 
@@ -786,22 +864,20 @@ if (!class_exists('SUPER_PayPal')):
 				'super_paypal_txn', 
 				'SUPER_PayPal::paypal_transaction'
 			);
-			add_submenu_page(
-				null, 
-				__( 'PayPal transactions', 'super-forms' ), 
-				__( 'PayPal transactions', 'super-forms' ), 
-				'manage_options', 
-				'super_paypal_txns', 
-				'SUPER_PayPal::paypal_transactions'
-			);
 
 			// Subscriptions menu
+			$count = get_option( 'super_paypal_sub_count', 2 );
+			if( $count>0 ) {
+				$count = ' <span class="update-plugins"><span class="plugin-count">' . $count . '</span></span>';
+			}else{
+				$count = '';
+			}
 			add_submenu_page(
 				'super_forms', 
 				__( 'PayPal Subscriptions', 'super-forms' ),
-				 __( 'PayPal Subscriptions', 'super-forms' ), 
-				 'manage_options', 
-				 'edit.php?post_type=super_paypal_sub'
+				'<span class="super-pp-icon" style="' . $styles . '"></span>' . __( 'Subscriptions', 'super-forms' ) . $count,
+				'manage_options', 
+				'edit.php?post_type=super_paypal_sub'
 			);
 			add_submenu_page(
 				null, 
@@ -811,14 +887,6 @@ if (!class_exists('SUPER_PayPal')):
 				'super_paypal_sub', 
 				'SUPER_PayPal::paypal_subscription'
 			);
-			add_submenu_page(
-				null, 
-				__( 'PayPal subscriptions', 'super-forms' ), 
-				__( 'PayPal subscriptions', 'super-forms' ), 
-				'manage_options', 
-				'super_paypal_subs', 
-				'SUPER_PayPal::paypal_subscriptions'
-			);
 
 		}
 
@@ -827,98 +895,104 @@ if (!class_exists('SUPER_PayPal')):
 	     * Handles the output for the view paypal transaction page in admin
 	     */
 	    public static function paypal_transaction() {
-	        $id = $_GET['id'];
-	        $date = get_the_date(false,$id);
-	        $time = get_the_time(false,$id);
-			$txn_data = get_post_meta( $id, '_super_txn_data', true );
-			$custom = explode( '|', $txn_data['custom'] );
-			?>
-	        <script>
-	            jQuery('.toplevel_page_super_forms').removeClass('wp-not-current-submenu').addClass('wp-menu-open wp-has-current-submenu');
-	            jQuery('.toplevel_page_super_forms').find('a[href$="super_paypal_txn"]').parents('li:eq(0)').addClass('current');
-	        </script>
-	        <div class="wrap">
-	            <div id="poststuff">
-	                <div id="post-body" class="metabox-holder columns-2">
-	                    <div id="postbox-container-1" class="postbox-container">
-	                        <div id="side-sortables" class="meta-box-sortables ui-sortable">
-	                            <div id="submitdiv" class="postbox ">
-	                                <div class="handlediv" title="">
-	                                    <br>
-	                                </div>
-	                                <h3 class="hndle ui-sortable-handle">
-	                                    <span><?php echo __('Transaction Details', 'super-forms' ); ?>:</span>
-	                                </h3>
-	                                <div class="inside">
-	                                    <div class="submitbox" id="submitpost">
-	                                        <div id="minor-publishing">
-	                                            <div class="misc-pub-section">
-	                                                <span><?php echo __( 'Transaction ID', 'super-forms' ) . ':'; ?> <strong><?php echo get_the_title($id); ?></strong></span>
-	                                            </div>
-												<div class="misc-pub-section">
-	                                                <span><?php echo __( 'Status', 'super-forms' ) . ':'; ?> <strong><?php echo $txn_data['payment_status']; ?></strong></span>
-	                                            </div>
-												<div class="misc-pub-section">
-	                                                <span><?php echo __( 'Payer E-mail', 'super-forms' ) . ':'; ?> <strong><?php echo $txn_data['payer_email']; ?></strong></span>
-	                                            </div>
-	                                            <div class="misc-pub-section">
-	                                                <span><?php echo __( 'Payment type', 'super-forms' ) . ':'; ?> <strong><?php echo $txn_data['payment_type']; ?></strong></span>
-	                                            </div>
-												<div class="misc-pub-section">
-	                                                <span><?php echo __('Submitted', 'super-forms' ) . ':'; ?> <strong><?php echo $date.' @ '.$time; ?></strong></span>
-	                                            </div>
-												<div class="misc-pub-section">
-	                                                <span><?php echo __('Based on Form', 'super-forms' ) . ':'; ?> <strong><?php echo '<a href="admin.php?page=super_create_form&id=' . $custom[0] . '">' . get_the_title( $custom[0] ) . '</a>'; ?></strong></span>
-	                                            </div>
+			$id = $_GET['id'];
+			if ( FALSE === get_post_status( $id ) ) {
+			  	// The post does not exist
+				echo 'This transaction does not exist.';
+			} else {
+			  	// The post exists
+		        $date = get_the_date(false,$id);
+		        $time = get_the_time(false,$id);
+				$txn_data = get_post_meta( $id, '_super_txn_data', true );
+				$custom = explode( '|', $txn_data['custom'] );
+				?>
+		        <script>
+		            jQuery('.toplevel_page_super_forms').removeClass('wp-not-current-submenu').addClass('wp-menu-open wp-has-current-submenu');
+		            jQuery('.toplevel_page_super_forms').find('a[href$="super_paypal_txn"]').parents('li:eq(0)').addClass('current');
+		        </script>
+		        <div class="wrap">
+		            <div id="poststuff">
+		                <div id="post-body" class="metabox-holder columns-2">
+		                    <div id="postbox-container-1" class="postbox-container">
+		                        <div id="side-sortables" class="meta-box-sortables ui-sortable">
+		                            <div id="submitdiv" class="postbox ">
+		                                <div class="handlediv" title="">
+		                                    <br>
+		                                </div>
+		                                <h3 class="hndle ui-sortable-handle">
+		                                    <span><?php echo __('Transaction Details', 'super-forms' ); ?>:</span>
+		                                </h3>
+		                                <div class="inside">
+		                                    <div class="submitbox" id="submitpost">
+		                                        <div id="minor-publishing">
+		                                            <div class="misc-pub-section">
+		                                                <span><?php echo __( 'Transaction ID', 'super-forms' ) . ':'; ?> <strong><?php echo get_the_title($id); ?></strong></span>
+		                                            </div>
+													<div class="misc-pub-section">
+		                                                <span><?php echo __( 'Status', 'super-forms' ) . ':'; ?> <strong><?php echo $txn_data['payment_status']; ?></strong></span>
+		                                            </div>
+													<div class="misc-pub-section">
+		                                                <span><?php echo __( 'Payer E-mail', 'super-forms' ) . ':'; ?> <strong><?php echo $txn_data['payer_email']; ?></strong></span>
+		                                            </div>
+		                                            <div class="misc-pub-section">
+		                                                <span><?php echo __( 'Payment type', 'super-forms' ) . ':'; ?> <strong><?php echo $txn_data['payment_type']; ?></strong></span>
+		                                            </div>
+													<div class="misc-pub-section">
+		                                                <span><?php echo __('Submitted', 'super-forms' ) . ':'; ?> <strong><?php echo $date.' @ '.$time; ?></strong></span>
+		                                            </div>
+													<div class="misc-pub-section">
+		                                                <span><?php echo __('Based on Form', 'super-forms' ) . ':'; ?> <strong><?php echo '<a href="admin.php?page=super_create_form&id=' . $custom[0] . '">' . get_the_title( $custom[0] ) . '</a>'; ?></strong></span>
+		                                            </div>
 
-	                                            <div class="clear"></div>
-	                                        </div>
+		                                            <div class="clear"></div>
+		                                        </div>
 
-	                                        <div id="major-publishing-actions">
-	                                            <div id="delete-action">
-	                                                <a class="submitdelete super-delete-contact-entry" data-contact-entry="<?php echo absint($id); ?>" href="#"><?php echo __('Move to Trash', 'super-forms' ); ?></a>
-	                                            </div>
-	                                            <div id="publishing-action">
-	                                                <span class="spinner"></span>
-	                                                <input name="print" type="submit" class="super-print-contact-entry button button-large" value="<?php echo __('Print', 'super-forms' ); ?>">
-	                                            </div>
-	                                            <div class="clear"></div>
-	                                        </div>
-	                                    </div>
+		                                        <div id="major-publishing-actions">
+		                                            <div id="delete-action">
+		                                                <a class="submitdelete super-delete-contact-entry" data-contact-entry="<?php echo absint($id); ?>" href="#"><?php echo __('Move to Trash', 'super-forms' ); ?></a>
+		                                            </div>
+		                                            <div id="publishing-action">
+		                                                <span class="spinner"></span>
+		                                                <input name="print" type="submit" class="super-print-contact-entry button button-large" value="<?php echo __('Print', 'super-forms' ); ?>">
+		                                            </div>
+		                                            <div class="clear"></div>
+		                                        </div>
+		                                    </div>
 
-	                                </div>
-	                            </div>
-	                        </div>
-	                    </div>
-	                    
-	                    <div id="postbox-container-2" class="postbox-container">
-	                        <div id="normal-sortables" class="meta-box-sortables ui-sortable">
-	                            <div id="super-contact-entry-data" class="postbox ">
-	                                <div class="handlediv" title="">
-	                                    <br>
-	                                </div>
-	                                <h3 class="hndle ui-sortable-handle">
-	                                    <span><?php echo __('Transaction Data', 'super-forms' ); ?>:</span>
-	                                </h3>
-	                                <div class="inside">
-	                                    <?php
-	                                    echo '<table>';
-                                            foreach( $txn_data as $k => $v ) {
-                                                echo '<tr><th align="right">' . $k . '</th><td>' . $v . '</td></tr>';
-                                            }
-	                                        echo apply_filters( 'super_after_paypal_txn_data_filter', '', array( 'paypal_txn_id'=>$_GET['id'], 'txn_data'=>$txn_data ) );
-	                                    echo '</table>';
-	                                    ?>
-	                                </div>
-	                            </div>
-	                        </div>
-	                        <div id="advanced-sortables" class="meta-box-sortables ui-sortable"></div>
-	                    </div>
-	                </div>
-	                <!-- /post-body -->
-	                <br class="clear">
-	            </div>
-	        <?php
+		                                </div>
+		                            </div>
+		                        </div>
+		                    </div>
+		                    
+		                    <div id="postbox-container-2" class="postbox-container">
+		                        <div id="normal-sortables" class="meta-box-sortables ui-sortable">
+		                            <div id="super-contact-entry-data" class="postbox ">
+		                                <div class="handlediv" title="">
+		                                    <br>
+		                                </div>
+		                                <h3 class="hndle ui-sortable-handle">
+		                                    <span><?php echo __('Transaction Data', 'super-forms' ); ?>:</span>
+		                                </h3>
+		                                <div class="inside">
+		                                    <?php
+		                                    echo '<table>';
+	                                            foreach( $txn_data as $k => $v ) {
+	                                                echo '<tr><th align="right">' . $k . '</th><td>' . $v . '</td></tr>';
+	                                            }
+		                                        echo apply_filters( 'super_after_paypal_txn_data_filter', '', array( 'paypal_txn_id'=>$_GET['id'], 'txn_data'=>$txn_data ) );
+		                                    echo '</table>';
+		                                    ?>
+		                                </div>
+		                            </div>
+		                        </div>
+		                        <div id="advanced-sortables" class="meta-box-sortables ui-sortable"></div>
+		                    </div>
+		                </div>
+		                <!-- /post-body -->
+		                <br class="clear">
+		            </div>
+		        <?php
+		    }
 	    }
 
 
@@ -1031,13 +1105,30 @@ if (!class_exists('SUPER_PayPal')):
 
 			if ((isset($_GET['page'])) && ($_GET['page'] == 'super_paypal_ipn')) {
 	
-				// Update subscription data
+				// txn_type options:
 				//subscr_signup
 				//subscr_cancel
 				//subscr_modify
 				//subscr_payment
 				//subscr_failed
 				//subscr_eot
+
+				// When the subscription has expired due to cancelation or expiration (term has ended) we don't have to do anything other then notifying paypal that we received the IPN message.
+				// The subscription has expired, either because the subscriber cancelled it or it has a fixed term (implying a fixed number of payments) and it has now expired with no further payments being due.
+				if( (isset($_POST['txn_type'])) && ($_POST['txn_type']=='subscr_eot') ) {
+					// Reply with an empty 200 response to indicate to paypal the IPN was received correctly.
+					header("HTTP/1.1 200 OK");
+					die();
+				}
+
+				// When the subscription payment has failed, not much we can do about this, and we don't have to do anything except let paypal know we received the IPN message
+				if( (isset($_POST['txn_type'])) && ($_POST['txn_type']=='subscr_failed') ) {
+					// Reply with an empty 200 response to indicate to paypal the IPN was received correctly.
+					header("HTTP/1.1 200 OK");
+					die();
+				}
+
+				// IPN message telling that the subscription is either being modified, suspended or canceled
 				if( (isset($_POST['txn_type'])) && (($_POST['txn_type']=='subscr_modify') || ($_POST['txn_type']=='recurring_payment_suspended') || ($_POST['txn_type']=='subscr_cancel')) ) {
 
 					// Get subscription ID
@@ -1050,7 +1141,7 @@ if (!class_exists('SUPER_PayPal')):
 
 					// Get ID based on ipn tracking ID
 					global $wpdb;
-					$post_id = $wpdb->get_var("SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_super_sub_id' AND meta_value = '$sub_id'");
+					$post_id = $wpdb->get_var("SELECT post_id FROM $wpdb->postmeta AS meta INNER JOIN $wpdb->posts AS post ON post.id = meta.post_id WHERE post.post_type = 'super_paypal_sub' AND meta_key = '_super_sub_id' AND meta_value = '$sub_id'");
 					
 					// Update data accordingly
 					if( isset($_POST['subscr_id']) ) {
@@ -1059,12 +1150,25 @@ if (!class_exists('SUPER_PayPal')):
 					if( isset($_POST['recurring_payment_id']) ) {
 						update_post_meta( $post_id, '_super_sub_id', $_POST['recurring_payment_id'] );
 					}
+
+					// If subscription is suspended
+					if($_POST['txn_type']=='recurring_payment_suspended'){
+						$post_txn_data = get_post_meta( $post_id, '_super_txn_data', true );
+						$post_txn_data['txn_type'] = 'recurring_payment_suspended';
+						$post_txn_data['profile_status'] = 'Suspended';
+						update_post_meta( $post_id, '_super_txn_data', $post_txn_data );
+					}
+					
+					// If subscription is canceled
 					if( $_POST['txn_type']=='subscr_cancel' ) {
 						$post_txn_data = get_post_meta( $post_id, '_super_txn_data', true );
 						$post_txn_data['txn_type'] = 'subscr_cancel';
-						$post_txn_data['payment_status'] = 'Refunded';
+						$post_txn_data['profile_status'] = 'Canceled';
 						update_post_meta( $post_id, '_super_txn_data', $post_txn_data );
-					}else{
+					}
+
+					// If subscription is modified
+					if($_POST['txn_type']=='subscr_modify'){
 						update_post_meta( $post_id, '_super_txn_data', $_POST );
 					}
 
@@ -1090,7 +1194,8 @@ if (!class_exists('SUPER_PayPal')):
 				}
 
 				// First retrieve the form settings
-				$custom = explode('|', $_POST['custom']);
+				$custom = apply_filters( 'super_paypal_custom_data_filter', $_POST['custom'] );
+				$custom = explode('|', $custom);
 				$form_id = $custom[0];
 				if (!$form_id) return;
 				if (absint($form_id) == 0) return;
@@ -1184,6 +1289,24 @@ if (!class_exists('SUPER_PayPal')):
 						add_post_meta($post_id, '_super_sub_id', $_POST['recurring_payment_id']);
 					}
 					add_post_meta( $post_id, '_super_txn_data', $_POST );
+
+					if( $_POST['txn_type']=='subscr_signup' ) {
+						$count = get_option( 'super_paypal_sub_count', 0 );
+						update_option( 'super_paypal_sub_count', ($count+1) );
+					}else{
+						$count = get_option( 'super_paypal_txn_count', 0 );
+						update_option( 'super_paypal_txn_count', ($count+1) );
+					}
+
+					// Update contact entry status after succesfull payment
+					if( !isset($settings['paypal_completed_entry_status']) ) $settings['paypal_completed_entry_status'] = '';
+					if( $settings['paypal_completed_entry_status']!='' ) {
+						$contact_entry_id = absint($custom[2]);
+						update_post_meta( $contact_entry_id, '_super_contact_entry_status', $settings['paypal_completed_entry_status'] );
+					}
+
+
+
 
 					/*
 					array (
