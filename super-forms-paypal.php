@@ -601,6 +601,7 @@ if (!class_exists('SUPER_PayPal')):
 			    case 'pp_status':
 			    	if( ($txn_data['txn_type']=='subscr_signup') || ($txn_data['txn_type']=='subscr_modify') || ($txn_data['txn_type']=='subscr_cancel') || ($txn_data['txn_type']=='recurring_payment_suspended') ) {
 				        $entry_status = 'Active';
+				        $entry_status_desc = '';
 				        if( isset($txn_data['profile_status']) ) {
 				        	$entry_status = $txn_data['profile_status'];
 				        	$entry_status_desc = $entry_status;
@@ -896,7 +897,7 @@ if (!class_exists('SUPER_PayPal')):
 	     */
 	    public static function paypal_transaction() {
 			$id = $_GET['id'];
-			if ( FALSE === get_post_status( $id ) ) {
+			if ( (FALSE === get_post_status($id)) && (get_post_type($id)!='super_paypal_txn') ) {
 			  	// The post does not exist
 				echo 'This transaction does not exist.';
 			} else {
@@ -940,8 +941,39 @@ if (!class_exists('SUPER_PayPal')):
 													<div class="misc-pub-section">
 		                                                <span><?php echo __('Submitted', 'super-forms' ) . ':'; ?> <strong><?php echo $date.' @ '.$time; ?></strong></span>
 		                                            </div>
+
+													<?php
+													if( (isset($custom[3])) && ($custom[3]!=0) ) {
+														$user_info = get_userdata($custom[3]);
+														echo '<div class="misc-pub-section">';
+		                                                	echo '<span>' . __( 'User', 'super-forms' ) . ': <a href="' . get_edit_user_link($user_info->ID) . '"><strong>' . $user_info->display_name . '</strong></a></span>';
+		                                            	echo '</div>';
+		                                           	}
+													if( (isset($custom[2])) && ($custom[2]!=0) ) {
+														echo '<div class="misc-pub-section">';
+		                                                	echo '<span>' . __( 'Contact Entry', 'super-forms' ) . ': <a href="admin.php?page=super_contact_entry&id=' . $custom[0] . '"><strong>' . get_the_title($custom[2]) . '</strong></a></span>';
+		                                            	echo '</div>';
+		                                           	}
+		                                           	
+													// Get subscription
+													$sub_id = 0;
+													if( isset($txn_data['subscr_id']) ) {
+														$sub_id = sanitize_text_field( $txn_data['subscr_id'] );
+													}
+													if( isset($txn_data['recurring_payment_id']) ) {
+														$sub_id = sanitize_text_field( $txn_data['recurring_payment_id'] );
+													}
+													global $wpdb;
+													$post_id = $wpdb->get_var("SELECT post_id FROM $wpdb->postmeta AS meta INNER JOIN $wpdb->posts AS post ON post.id = meta.post_id WHERE post.post_type = 'super_paypal_sub' AND meta_key = '_super_sub_id' AND meta_value = '$sub_id'");
+													if(absint($post_id)!=0){
+														echo '<div class="misc-pub-section">';
+	                                                		echo '<span>' . __( 'Based on subscription', 'super-forms' ) . ': <a href="admin.php?page=super_paypal_sub&id=' . $post_id . '"><strong>' . $sub_id . '</strong></a></span>';
+	                                            		echo '</div>';													
+		                                           	}
+		                                           	?>
+
 													<div class="misc-pub-section">
-		                                                <span><?php echo __('Based on Form', 'super-forms' ) . ':'; ?> <strong><?php echo '<a href="admin.php?page=super_create_form&id=' . $custom[0] . '">' . get_the_title( $custom[0] ) . '</a>'; ?></strong></span>
+		                                                <?php echo '<span>' . __('Based on Form', 'super-forms' ) . ':'; ?> <?php echo '<a href="admin.php?page=super_create_form&id=' . $custom[0] . '"><strong>' . get_the_title( $custom[0] ) . '</strong></a></span>'; ?>
 		                                            </div>
 
 		                                            <div class="clear"></div>
@@ -1001,98 +1033,103 @@ if (!class_exists('SUPER_PayPal')):
 	     */
 	    public static function paypal_subscription() {
 	        $id = $_GET['id'];
-	        $date = get_the_date(false,$id);
-	        $time = get_the_time(false,$id);
-			$txn_data = get_post_meta( $id, '_super_txn_data', true );
-			$custom = explode( '|', $txn_data['custom'] );
-			?>
-	        <script>
-	            jQuery('.toplevel_page_super_forms').removeClass('wp-not-current-submenu').addClass('wp-menu-open wp-has-current-submenu');
-	            jQuery('.toplevel_page_super_forms').find('a[href$="super_paypal_sub"]').parents('li:eq(0)').addClass('current');
-	        </script>
-	        <div class="wrap">
-	            <div id="poststuff">
-	                <div id="post-body" class="metabox-holder columns-2">
-	                    <div id="postbox-container-1" class="postbox-container">
-	                        <div id="side-sortables" class="meta-box-sortables ui-sortable">
-	                            <div id="submitdiv" class="postbox ">
-	                                <div class="handlediv" title="">
-	                                    <br>
-	                                </div>
-	                                <h3 class="hndle ui-sortable-handle">
-	                                    <span><?php echo __('Transaction Details', 'super-forms' ); ?>:</span>
-	                                </h3>
-	                                <div class="inside">
-	                                    <div class="submitbox" id="submitpost">
-	                                        <div id="minor-publishing">
-	                                            <div class="misc-pub-section">
-	                                                <span><?php echo __( 'Transaction ID', 'super-forms' ) . ':'; ?> <strong><?php echo get_the_title($id); ?></strong></span>
-	                                            </div>
-												<div class="misc-pub-section">
-	                                                <span><?php echo __( 'Status', 'super-forms' ) . ':'; ?> <strong><?php echo (isset($txn_data['profile_status']) ? $txn_data['profile_status'] : __( 'Active', 'super-forms' )); ?></strong></span>
-	                                            </div>
-												<div class="misc-pub-section">
-	                                                <span><?php echo __( 'Payer E-mail', 'super-forms' ) . ':'; ?> <strong><?php echo $txn_data['payer_email']; ?></strong></span>
-	                                            </div>
-	                                            <div class="misc-pub-section">
-	                                                <span><?php echo __( 'Payment type', 'super-forms' ) . ':'; ?> <strong><?php echo __( 'Subscription', 'super-forms' ); ?></strong></span>
-	                                            </div>
-												<div class="misc-pub-section">
-	                                                <span><?php echo __('Submitted', 'super-forms' ) . ':'; ?> <strong><?php echo $date.' @ '.$time; ?></strong></span>
-	                                            </div>
-												<div class="misc-pub-section">
-	                                                <span><?php echo __('Based on Form', 'super-forms' ) . ':'; ?> <strong><?php echo '<a href="admin.php?page=super_create_form&id=' . $custom[0] . '">' . get_the_title( $custom[0] ) . '</a>'; ?></strong></span>
-	                                            </div>
+			if ( (FALSE === get_post_status($id)) && (get_post_type($id)!='super_paypal_sub') ) {
+			  	// The post does not exist
+				echo 'This subscription does not exist.';
+			} else {
+		        $date = get_the_date(false,$id);
+		        $time = get_the_time(false,$id);
+				$txn_data = get_post_meta( $id, '_super_txn_data', true );
+				$custom = explode( '|', $txn_data['custom'] );
+				?>
+		        <script>
+		            jQuery('.toplevel_page_super_forms').removeClass('wp-not-current-submenu').addClass('wp-menu-open wp-has-current-submenu');
+		            jQuery('.toplevel_page_super_forms').find('a[href$="super_paypal_sub"]').parents('li:eq(0)').addClass('current');
+		        </script>
+		        <div class="wrap">
+		            <div id="poststuff">
+		                <div id="post-body" class="metabox-holder columns-2">
+		                    <div id="postbox-container-1" class="postbox-container">
+		                        <div id="side-sortables" class="meta-box-sortables ui-sortable">
+		                            <div id="submitdiv" class="postbox ">
+		                                <div class="handlediv" title="">
+		                                    <br>
+		                                </div>
+		                                <h3 class="hndle ui-sortable-handle">
+		                                    <span><?php echo __('Transaction Details', 'super-forms' ); ?>:</span>
+		                                </h3>
+		                                <div class="inside">
+		                                    <div class="submitbox" id="submitpost">
+		                                        <div id="minor-publishing">
+		                                            <div class="misc-pub-section">
+		                                                <span><?php echo __( 'Transaction ID', 'super-forms' ) . ':'; ?> <strong><?php echo get_the_title($id); ?></strong></span>
+		                                            </div>
+													<div class="misc-pub-section">
+		                                                <span><?php echo __( 'Status', 'super-forms' ) . ':'; ?> <strong><?php echo (isset($txn_data['profile_status']) ? $txn_data['profile_status'] : __( 'Active', 'super-forms' )); ?></strong></span>
+		                                            </div>
+													<div class="misc-pub-section">
+		                                                <span><?php echo __( 'Payer E-mail', 'super-forms' ) . ':'; ?> <strong><?php echo $txn_data['payer_email']; ?></strong></span>
+		                                            </div>
+		                                            <div class="misc-pub-section">
+		                                                <span><?php echo __( 'Payment type', 'super-forms' ) . ':'; ?> <strong><?php echo __( 'Subscription', 'super-forms' ); ?></strong></span>
+		                                            </div>
+													<div class="misc-pub-section">
+		                                                <span><?php echo __('Submitted', 'super-forms' ) . ':'; ?> <strong><?php echo $date.' @ '.$time; ?></strong></span>
+		                                            </div>
+													<div class="misc-pub-section">
+		                                                <span><?php echo __('Based on Form', 'super-forms' ) . ':'; ?> <strong><?php echo '<a href="admin.php?page=super_create_form&id=' . $custom[0] . '">' . get_the_title( $custom[0] ) . '</a>'; ?></strong></span>
+		                                            </div>
 
-	                                            <div class="clear"></div>
-	                                        </div>
+		                                            <div class="clear"></div>
+		                                        </div>
 
-	                                        <div id="major-publishing-actions">
-	                                            <div id="delete-action">
-	                                                <a class="submitdelete super-delete-contact-entry" data-contact-entry="<?php echo absint($id); ?>" href="#"><?php echo __('Move to Trash', 'super-forms' ); ?></a>
-	                                            </div>
-	                                            <div id="publishing-action">
-	                                                <span class="spinner"></span>
-	                                                <input name="print" type="submit" class="super-print-contact-entry button button-large" value="<?php echo __('Print', 'super-forms' ); ?>">
-	                                            </div>
-	                                            <div class="clear"></div>
-	                                        </div>
-	                                    </div>
+		                                        <div id="major-publishing-actions">
+		                                            <div id="delete-action">
+		                                                <a class="submitdelete super-delete-contact-entry" data-contact-entry="<?php echo absint($id); ?>" href="#"><?php echo __('Move to Trash', 'super-forms' ); ?></a>
+		                                            </div>
+		                                            <div id="publishing-action">
+		                                                <span class="spinner"></span>
+		                                                <input name="print" type="submit" class="super-print-contact-entry button button-large" value="<?php echo __('Print', 'super-forms' ); ?>">
+		                                            </div>
+		                                            <div class="clear"></div>
+		                                        </div>
+		                                    </div>
 
-	                                </div>
-	                            </div>
-	                        </div>
-	                    </div>
-	                    
-	                    <div id="postbox-container-2" class="postbox-container">
-	                        <div id="normal-sortables" class="meta-box-sortables ui-sortable">
-	                            <div id="super-contact-entry-data" class="postbox ">
-	                                <div class="handlediv" title="">
-	                                    <br>
-	                                </div>
-	                                <h3 class="hndle ui-sortable-handle">
-	                                    <span><?php echo __('Transaction Data', 'super-forms' ); ?>:</span>
-	                                </h3>
-	                                <div class="inside">
-	                                    <?php
-	                                    echo '<table>';
-                                            foreach( $txn_data as $k => $v ) {
-                                                echo '<tr><th align="right">' . $k . '</th><td>' . $v . '</td></tr>';
-                                            }
-	                                        echo apply_filters( 'super_after_paypal_txn_data_filter', '', array( 'paypal_txn_id'=>$_GET['id'], 'txn_data'=>$txn_data ) );
-	                                    echo '</table>';
-	                                    ?>
-	                                </div>
-	                            </div>
-	                        </div>
-	                        <div id="advanced-sortables" class="meta-box-sortables ui-sortable"></div>
-	                    </div>
-	                </div>
-	                <!-- /post-body -->
-	                <br class="clear">
-	            </div>
-	        <?php
-	    }
+		                                </div>
+		                            </div>
+		                        </div>
+		                    </div>
+		                    
+		                    <div id="postbox-container-2" class="postbox-container">
+		                        <div id="normal-sortables" class="meta-box-sortables ui-sortable">
+		                            <div id="super-contact-entry-data" class="postbox ">
+		                                <div class="handlediv" title="">
+		                                    <br>
+		                                </div>
+		                                <h3 class="hndle ui-sortable-handle">
+		                                    <span><?php echo __('Transaction Data', 'super-forms' ); ?>:</span>
+		                                </h3>
+		                                <div class="inside">
+		                                    <?php
+		                                    echo '<table>';
+	                                            foreach( $txn_data as $k => $v ) {
+	                                                echo '<tr><th align="right">' . $k . '</th><td>' . $v . '</td></tr>';
+	                                            }
+		                                        echo apply_filters( 'super_after_paypal_txn_data_filter', '', array( 'paypal_txn_id'=>$_GET['id'], 'txn_data'=>$txn_data ) );
+		                                    echo '</table>';
+		                                    ?>
+		                                </div>
+		                            </div>
+		                        </div>
+		                        <div id="advanced-sortables" class="meta-box-sortables ui-sortable"></div>
+		                    </div>
+		                </div>
+		                <!-- /post-body -->
+		                <br class="clear">
+		            </div>
+		        <?php
+		    }
+		}
 
 
 
