@@ -482,19 +482,19 @@ if (!class_exists('SUPER_PayPal')):
 
 		}
 
-		public function get_amount_per_cycle($txn_data){
+		public static function get_amount_per_cycle($txn_data){
 			if( isset($txn_data['amount_per_cycle']) ) return $txn_data['amount_per_cycle'];
 			if( isset($txn_data['mc_amount3']) ) return $txn_data['mc_amount3'];
 		}
-		public function get_currency_code($txn_data){
+		public static function get_currency_code($txn_data){
 			if( isset($txn_data['currency_code']) ) return $txn_data['currency_code'];
 			if( isset($txn_data['mc_currency']) ) return $txn_data['mc_currency'];
 		}
-		public function get_product_item_name($txn_data){
+		public static function get_product_item_name($txn_data){
 			if( isset($txn_data['item_name']) ) return $txn_data['item_name'];
 			if( isset($txn_data['product_name']) ) return $txn_data['product_name'];
 		}
-		public function get_payment_cycle($txn_data, $period=3){
+		public static function get_payment_cycle($txn_data, $period=3){
 			$payment_cycle = '';
 			if( isset($txn_data['payment_cycle']) ) {
 				$payment_cycle = $txn_data['payment_cycle'];
@@ -588,14 +588,14 @@ if (!class_exists('SUPER_PayPal')):
 			$custom = explode( '|', $txn_data['custom'] );
 
 			// Get currency code e.g: EUR
-			$currency_code = $this->get_currency_code($txn_data);
+			$currency_code = self::get_currency_code($txn_data);
 			$symbol = self::$currency_codes[$currency_code]['symbol'];
 
 			// Get product/item name
-			$product_name = $this->get_product_item_name($txn_data);
+			$product_name = self::get_product_item_name($txn_data);
 
 			// Get amount per cycle
-			$amount_per_cycle = $this->get_amount_per_cycle($txn_data);
+			$amount_per_cycle = self::get_amount_per_cycle($txn_data);
 
 			switch ($column) {
 			    case 'pp_status':
@@ -657,7 +657,7 @@ if (!class_exists('SUPER_PayPal')):
 							}else{
 			    				echo '<strong>' . $product_name . '</strong><br />';
 								// Get payment cycle
-								$payment_cycle = $this->get_payment_cycle($txn_data, 3);
+								$payment_cycle = self::get_payment_cycle($txn_data, 3);
 			    				echo '(' . $payment_cycle . ': ' . $symbol . number_format_i18n($amount_per_cycle, 2) . ' ' . $currency_code . ')';
 			    			}
 			    		}else{
@@ -668,7 +668,7 @@ if (!class_exists('SUPER_PayPal')):
 			    case 'pp_initial_payment':
 					if( isset($txn_data['mc_amount1']) ) {
 						// Get payment cycle
-						$payment_cycle = $this->get_payment_cycle($txn_data, 1);
+						$payment_cycle = self::get_payment_cycle($txn_data, 1);
 						echo '(' . $payment_cycle . ': ' . $symbol . number_format_i18n($txn_data['mc_amount1'], 2) . ' ' . $currency_code . ')';
 					}
 					/*
@@ -682,7 +682,7 @@ if (!class_exists('SUPER_PayPal')):
 			    case 'pp_trial_period':
 					if( isset($txn_data['mc_amount2']) ) {
 						// Get payment cycle
-						$payment_cycle = $this->get_payment_cycle($txn_data, 2);
+						$payment_cycle = self::get_payment_cycle($txn_data, 2);
 						echo '(' . $payment_cycle . ': ' . $symbol . number_format_i18n($txn_data['mc_amount2'], 2) . ' ' . $currency_code . ')';
 					}
 					/*
@@ -1003,6 +1003,82 @@ if (!class_exists('SUPER_PayPal')):
 		                                    <br>
 		                                </div>
 		                                <h3 class="hndle ui-sortable-handle">
+		                                    <span><?php echo __('Order details', 'super-forms' ); ?>:</span>
+		                                </h3>
+		                                <div class="inside">
+		                                    <?php
+											// Get currency code e.g: EUR
+											$currency_code = self::get_currency_code($txn_data);
+		                                    $mc_gross = number_format_i18n($txn_data['mc_gross'], 2) . ' ' . $currency_code;
+		                                    echo '<table style="width:100%">';
+		                                    	echo '<tr><th align="left">Item name</th><th align="right">Quantity</th><th align="right">Price</th><th align="right">Subtotal</th></tr>';
+	                                            $i = 1;
+	                                            while( isset($txn_data['item_name' . $i])) {
+	                                                echo '<tr>';
+	                                                echo '<td align="left">' . $txn_data['item_name' . $i] . '</td>';
+	                                                echo '<td align="right">' . $txn_data['quantity' . $i] . '</td>';
+	                                                echo '<td align="right">' . number_format_i18n(($txn_data['mc_gross_' . $i]/$txn_data['quantity' . $i]), 2) . ' ' . $currency_code . '</td>';
+	                                                echo '<td align="right">' . number_format_i18n($txn_data['mc_gross_' . $i], 2) . ' ' . $currency_code . '</td>';
+	                                                echo '</tr>';
+	                                                $i++;
+	                                            }
+		                                    	echo '<tr><th colspan="3" align="right">Purchase total</th><td align="right">' . $mc_gross . '</td></tr>';
+		                                    echo '</table>';
+		                                    ?>
+		                                </div>
+		                            </div>
+		                        </div>
+
+		                        <div id="normal-sortables" class="meta-box-sortables ui-sortable">
+		                            <div id="super-contact-entry-data" class="postbox ">
+		                                <div class="handlediv" title="">
+		                                    <br>
+		                                </div>
+		                                <h3 class="hndle ui-sortable-handle">
+		                                    <span><?php echo __('Payment details', 'super-forms' ); ?>:</span>
+		                                </h3>
+		                                <div class="inside">
+		                                    <?php
+		                                    echo '<table>';
+		                                    echo '<tr><th align="right">Purchase total</th><td align="right">' . $mc_gross . '</td></tr>';
+		                                    echo '<tr><th align="right">Sales tax</th><td align="right"></td></tr>';
+		                                    echo '<tr><th align="right">Shipping amount</th><td align="right">' . number_format_i18n($txn_data['mc_shipping'], 2) . ' ' . $currency_code . '</td></tr>';
+		                                    echo '<tr><th align="right">Handling amount</th><td align="right"></td></tr>';
+		                                    echo '<tr><th align="right">Insurance</th><td align="right">' . number_format_i18n($txn_data['insurance_amount'], 2) . ' ' . $currency_code . '</td></tr>'; 
+		                                    echo '<tr><th align="right">Gross amount</th><td align="right">' . $mc_gross . '</td></tr>';
+		                                    echo '<tr><th align="right">PayPal fee</th><td align="right">' . number_format_i18n($txn_data['mc_fee'], 2) . ' ' . $currency_code . '</td></tr>';
+		                                    echo '<tr><th align="right">Net amount</th><td align="right">' . number_format_i18n(($txn_data['mc_gross']-$txn_data['mc_fee']), 2) . ' ' . $currency_code . '</td></tr>';
+		                                    echo '</table>';
+
+		                                    if( (isset($txn_data['invoice'])) && ($txn_data['invoice']!='') ) {
+		                                    	echo '<table>';
+												echo '<tr><th>Invoice ID</th><td>' . $txn_data['invoice'] . '</td></tr>';
+		                                    	echo '</table>';
+		                                    }
+
+	                                    	echo '<table>';
+											echo '<tr>';
+												echo '<th valign="top">Paid by</th>';
+												echo '<td>';
+													echo $txn_data['first_name'] . ' ' . $txn_data['last_name'] . '<br />';
+													echo 'The sender of this payment has <strong>verified their account and is located outside the US.</strong><br />';
+													echo $txn_data['payer_email'];
+												echo '</td>';
+												echo '</tr>';
+	                                    	echo '</table>';
+
+		                                    ?>
+		                                </div>
+		                            </div>
+		                        </div>
+
+
+		                        <div id="normal-sortables" class="meta-box-sortables ui-sortable">
+		                            <div id="super-contact-entry-data" class="postbox ">
+		                                <div class="handlediv" title="">
+		                                    <br>
+		                                </div>
+		                                <h3 class="hndle ui-sortable-handle">
 		                                    <span><?php echo __('Transaction Data', 'super-forms' ); ?>:</span>
 		                                </h3>
 		                                <div class="inside">
@@ -1017,7 +1093,11 @@ if (!class_exists('SUPER_PayPal')):
 		                                </div>
 		                            </div>
 		                        </div>
+
 		                        <div id="advanced-sortables" class="meta-box-sortables ui-sortable"></div>
+
+
+
 		                    </div>
 		                </div>
 		                <!-- /post-body -->
@@ -1690,7 +1770,7 @@ if (!class_exists('SUPER_PayPal')):
 				$action = 'https://www.' . ($settings['paypal_mode'] == 'sandbox' ? 'sandbox.' : '') . 'paypal.com/cgi-bin/webscr';
 				$message = '';
 
-				$message.= '<form target="_self" id="super_paypal_' . $atts['post']['form_id'] . '" action="' . $action . '" method="post">';
+				$message .= '<form target="_self" id="super_paypal_' . $atts['post']['form_id'] . '" action="' . $action . '" method="post">';
 
 				// If continue shopping is enabled (e.g: custom URL redirect is enabled for the form)
 	            if( !empty( $settings['form_redirect_option'] ) ) {
@@ -1706,87 +1786,153 @@ if (!class_exists('SUPER_PayPal')):
 	                }
 	            }
 
-				$message.= '<input type="hidden" name="cmd" value="' . $cmd . '">';
-				$message.= '<input type="hidden" name="charset" value="UTF-8">';
-				$message.= '<input type="hidden" name="business" value="' . esc_attr(SUPER_Common::email_tags($settings['paypal_merchant_email'], $data, $settings)) . '">';
-				$message.= '<input type="hidden" name="notify_url" value="' . esc_url(SUPER_Common::email_tags($notify_url, $data, $settings)) . '">';
-				$message.= '<input type="hidden" name="return" value="' . esc_url(SUPER_Common::email_tags($return_url, $data, $settings)) . '">';
-				$message.= '<input type="hidden" name="cancel_return" value="' . esc_url(SUPER_Common::email_tags($settings['paypal_cancel_url'], $data, $settings)) . '">';
-				$message.= '<input type="hidden" name="currency_code" value="' . SUPER_Common::email_tags($settings['paypal_currency_code'], $data, $settings) . '" />';
-				$message.= '<input type="hidden" name="custom" value="' . esc_attr(implode("|", $custom)) . '">';
-				if ($settings['paypal_invoice'] != '') {
-					$message.= '<input type="hidden" name="invoice" value="' . SUPER_Common::email_tags($settings['paypal_invoice'], $data, $settings) . '">';
-				}
-				if ($settings['paypal_handling'] != '') {
-					$message.= '<input type="hidden" name="handling" value="' . SUPER_Common::email_tags($settings['paypal_handling'], $data, $settings) . '">';
-				}
-				if ($settings['paypal_tax'] != '') {
-					$message.= '<input type="hidden" name="tax" value="' . SUPER_Common::email_tags($settings['paypal_tax'], $data, $settings) . '">';
-				}
-				if ($settings['paypal_tax_rate'] != '') {
-					$message.= '<input type="hidden" name="tax_rate" value="' . SUPER_Common::email_tags($settings['paypal_tax_rate'], $data, $settings) . '">';
-				}
-				if ($settings['paypal_weight_unit'] != '') {
-					$message.= '<input type="hidden" name="weight_unit" value="' . SUPER_Common::email_tags($settings['paypal_weight_unit'], $data, $settings) . '">';
+
+	            $message .= '<input type="hidden" name="cmd" value="' . $cmd . '">';
+
+	            // Sets the character set and character encoding for the billing information/log-in page on the PayPal website. In addition, this variable sets the same values for information that you send to PayPal in your HTML button code. Default is based on the language encoding settings in your account profile.
+				$message .= '<input type="hidden" name="charset" value="UTF-8">';
+
+	            // The URL of the 150x50-pixel image displayed as your logo in the upper left corner of the PayPal checkout pages.
+				// Default is your business name, if you have a PayPal Business account or your email address, if you have PayPal Premier or Personal account.
+				if( !empty($settings['paypal_image_url']) ) {
+					$message .= '<input type="hidden" name="image_url" value="">';
 				}
 
+				// Your PayPal ID or an email address associated with your PayPal account. Email addresses must be confirmed.
+				$message .= '<input type="hidden" name="business" value="' . esc_attr(SUPER_Common::email_tags($settings['paypal_merchant_email'], $data, $settings)) . '">';
+				
+				// The URL to which PayPal posts information about the payment, in the form of Instant Payment Notification messages.
+				$message .= '<input type="hidden" name="notify_url" value="' . esc_url(SUPER_Common::email_tags($notify_url, $data, $settings)) . '">';
+
+	            // Do not prompt buyers for a shipping address.
+				// 0. Prompt for an address, but do not require one.
+				// 1. Do not prompt for an address.
+				// 2. Prompt for an address and require one.
+				if( !empty($settings['paypal_no_shipping']) ) {
+					$message .= '<input type="hidden" name="no_shipping" value="2">';
+				}
+
+				// The URL to which PayPal redirects buyers' browser after they complete their payments. For example, specify a URL on your site that displays a hank you for your payment page.
+				$message .= '<input type="hidden" name="return" value="' . esc_url(SUPER_Common::email_tags($return_url, $data, $settings)) . '">';
+
+				// The buyer's browser is redirected to the return URL by using the POST method, and all payment variables are included.
+	            $message .= '<input type="hidden" name="rm" value="2">';
+
+				// A URL to which PayPal redirects the buyers' browsers if they cancel checkout before completing their payments. For example, specify a URL on your website that displays the Payment Canceled page.
+				$message .= '<input type="hidden" name="cancel_return" value="' . esc_url(SUPER_Common::email_tags($settings['paypal_cancel_url'], $data, $settings)) . '">';
+				
+				// The currency of the payment. Default is USD.
+				$message .= '<input type="hidden" name="currency_code" value="' . SUPER_Common::email_tags($settings['paypal_currency_code'], $data, $settings) . '" />';
+				
+				// Pass-through variable for your own tracking purposes, which buyers do not see.
+				$message .= '<input type="hidden" name="custom" value="' . esc_attr(implode("|", $custom)) . '">';
+				
+				// Pass-through variable you can use to identify your invoice number for this purchase.
+				if( !empty($settings['paypal_invoice']) ) {
+					$message .= '<input type="hidden" name="invoice" value="' . SUPER_Common::email_tags($settings['paypal_invoice'], $data, $settings) . '">';
+				}
+
+				if ($cmd == '_cart') {
+					// tax_cart
+					if( !empty($settings['paypal_tax_cart']) ) {
+						$message .= '<input type="hidden" name="tax_cart" value="' . SUPER_Common::email_tags($settings['paypal_tax_cart'], $data, $settings) . '">';
+					}
+					// weight_cart
+					if( !empty($settings['paypal_weight_cart']) ) {
+						$message .= '<input type="hidden" name="weight_cart" value="' . SUPER_Common::email_tags($settings['paypal_weight_cart'], $data, $settings) . '">';
+					}
+					// discount_amount_cart
+					if( !empty($settings['paypal_discount_amount_cart']) ) {
+						$message .= '<input type="hidden" name="discount_amount_cart" value="' . SUPER_Common::email_tags($settings['paypal_discount_amount_cart'], $data, $settings) . '">';
+					}
+					// discount_rate_cart
+					if( !empty($settings['paypal_discount_rate_cart']) ) {
+						$message .= '<input type="hidden" name="discount_rate_cart" value="' . SUPER_Common::email_tags($settings['paypal_discount_rate_cart'], $data, $settings) . '">';
+					}
+					// handling_cart
+					if( !empty($settings['paypal_handling_cart']) ) {
+						$message .= '<input type="hidden" name="handling_cart" value="' . SUPER_Common::email_tags($settings['paypal_handling_cart'], $data, $settings) . '">';
+					}
+				}
+
+				/*
+				if( !empty($settings['paypal_handling']) ) {
+					$message .= '<input type="hidden" name="handling" value="' . SUPER_Common::email_tags($settings['paypal_handling'], $data, $settings) . '">';
+				}
+				if( !empty($settings['paypal_tax']) ) {
+					$message .= '<input type="hidden" name="tax" value="' . SUPER_Common::email_tags($settings['paypal_tax'], $data, $settings) . '">';
+				}
+				if( !empty($settings['paypal_tax_rate']) ) {
+					$message .= '<input type="hidden" name="tax_rate" value="' . SUPER_Common::email_tags($settings['paypal_tax_rate'], $data, $settings) . '">';
+				}
+				if( !empty($settings['paypal_weight_unit']) ) {
+					$message .= '<input type="hidden" name="weight_unit" value="' . SUPER_Common::email_tags($settings['paypal_weight_unit'], $data, $settings) . '">';
+				}
+				*/
+
 				if (($cmd == '_xclick') || ($cmd == '_donations')) {
-					if ($settings['paypal_item_name'] != '') {
-						$message.= '<input type="hidden" name="item_name" value="' . esc_attr(SUPER_Common::email_tags($settings['paypal_item_name'], $data, $settings)) . '">';
+					$message .= '<input type="hidden" name="amount" value="' . SUPER_Common::email_tags($settings['paypal_item_amount'], $data, $settings) . '">';
+					if( !empty($settings['paypal_item_name']) ) {
+						$message .= '<input type="hidden" name="item_name" value="' . esc_attr(SUPER_Common::email_tags($settings['paypal_item_name'], $data, $settings)) . '">';
 					}
-					if ($settings['paypal_item_number'] != '') {
-						$message.= '<input type="hidden" name="item_number" value="' . esc_attr(SUPER_Common::email_tags($settings['paypal_item_number'], $data, $settings)) . '">';
-					}
-					if ($settings['paypal_item_quantity'] != '') {
-						$message.= '<input type="hidden" name="quantity" value="' . SUPER_Common::email_tags($settings['paypal_item_quantity'], $data, $settings) . '">';
-					}
-					if ($settings['paypal_item_shipping'] != '') {
-						$message.= '<input type="hidden" name="shipping" value="' . SUPER_Common::email_tags($settings['paypal_item_shipping'], $data, $settings) . '">';
-						// $message .= '<input type="hidden" name="shipping2" value="' . $settings['paypal_item_shipping'] . '">';
-					}
-					if ($settings['paypal_undefined_quantity'] != '') {
-						$message.= '<input type="hidden" name="undefined_quantity" value="' . SUPER_Common::email_tags($settings['paypal_undefined_quantity'], $data, $settings) . '">';
-					}
-					if ($settings['paypal_item_weight'] != '') {
-						$message.= '<input type="hidden" name="weight" value="' . SUPER_Common::email_tags($settings['paypal_item_weight'], $data, $settings) . '">';
-					}
-					if ($cmd == '_xclick') {
-						if ($settings['paypal_item_discount_amount'] != '') {
-							$message.= '<input type="hidden" name="discount_amount" value="' . SUPER_Common::email_tags($settings['paypal_item_discount_amount'], $data, $settings) . '">';
-							$message.= '<input type="hidden" name="discount_amount2" value="' . SUPER_Common::email_tags($settings['paypal_item_discount_amount'], $data, $settings) . '">';
+					if( $cmd == '_xclick' ) {
+						if( !empty($settings['paypal_item_number']) ) {
+							$message .= '<input type="hidden" name="item_number" value="' . esc_attr(SUPER_Common::email_tags($settings['paypal_item_number'], $data, $settings)) . '">';
 						}
-						if ($settings['paypal_item_discount_rate'] != '') {
-							$message.= '<input type="hidden" name="discount_rate" value="' . SUPER_Common::email_tags($settings['paypal_item_discount_rate'], $data, $settings) . '">';
-							$message.= '<input type="hidden" name="discount_rate2" value="' . SUPER_Common::email_tags($settings['paypal_item_discount_rate'], $data, $settings) . '">';
+						if( !empty($settings['paypal_item_quantity']) ) {
+							$message .= '<input type="hidden" name="quantity" value="' . SUPER_Common::email_tags($settings['paypal_item_quantity'], $data, $settings) . '">';
 						}
-						if ($settings['paypal_item_discount_num'] != '') {
-							$message.= '<input type="hidden" name="discount_num" value="' . SUPER_Common::email_tags($settings['paypal_item_discount_num'], $data, $settings) . '">';
+						if( !empty($settings['paypal_item_shipping']) ) {
+							$message .= '<input type="hidden" name="shipping" value="' . SUPER_Common::email_tags($settings['paypal_item_shipping'], $data, $settings) . '">';
+						}
+						if( !empty($settings['paypal_item_shipping2']) ) {
+							$message .= '<input type="hidden" name="shipping2" value="' . SUPER_Common::email_tags($settings['paypal_item_shipping2'], $data, $settings) . '">';
+						}
+						if( !empty($settings['paypal_undefined_quantity']) ) {
+							$message .= '<input type="hidden" name="undefined_quantity" value="' . SUPER_Common::email_tags($settings['paypal_undefined_quantity'], $data, $settings) . '">';
+						}
+						if( !empty($settings['paypal_item_weight']) ) {
+							$message .= '<input type="hidden" name="weight" value="' . SUPER_Common::email_tags($settings['paypal_item_weight'], $data, $settings) . '">';
+						}
+						if( !empty($settings['paypal_item_discount_amount']) ) {
+							$message .= '<input type="hidden" name="discount_amount" value="' . SUPER_Common::email_tags($settings['paypal_item_discount_amount'], $data, $settings) . '">';
+							$message .= '<input type="hidden" name="discount_amount2" value="' . SUPER_Common::email_tags($settings['paypal_item_discount_amount'], $data, $settings) . '">';
+						}
+						if( !empty($settings['paypal_item_discount_rate']) ) {
+							$message .= '<input type="hidden" name="discount_rate" value="' . SUPER_Common::email_tags($settings['paypal_item_discount_rate'], $data, $settings) . '">';
+							$message .= '<input type="hidden" name="discount_rate2" value="' . SUPER_Common::email_tags($settings['paypal_item_discount_rate'], $data, $settings) . '">';
+						}
+						if( !empty($settings['paypal_item_discount_num']) ) {
+							$message .= '<input type="hidden" name="discount_num" value="' . SUPER_Common::email_tags($settings['paypal_item_discount_num'], $data, $settings) . '">';
 						}
 					}
-					$message.= '<input type="hidden" name="amount" value="' . SUPER_Common::email_tags($settings['paypal_item_amount'], $data, $settings) . '">';
 				}
 
 				// Cart checkout
 				if ($cmd == '_cart') {
-					$message.= '<input type="hidden" name="upload" value="1">';
+					$message .= '<input type="hidden" name="upload" value="1">';
 
 					// Add all items to the cart
 					$items = explode("\n", $settings['paypal_cart_items']);
 					foreach( $items as $k => $v ) {
 						$options = explode("|", $v);
-						$message.= '<input type="hidden" name="amount_' . ($k+1) . '" value="' . SUPER_Common::email_tags($options[0], $data, $settings) . '">';
-						$message.= '<input type="hidden" name="quantity_' . ($k+1) . '" value="' . SUPER_Common::email_tags($options[1], $data, $settings) . '">';
-						$message.= '<input type="hidden" name="item_name_' . ($k+1) . '" value="' . SUPER_Common::email_tags($options[2], $data, $settings) . '">';
+						if(!empty($options[0])) $message .= '<input type="hidden" name="amount_' . ($k+1) . '" value="' . SUPER_Common::email_tags($options[0], $data, $settings) . '">';
+						if(!empty($options[1])) $message .= '<input type="hidden" name="quantity_' . ($k+1) . '" value="' . SUPER_Common::email_tags($options[1], $data, $settings) . '">';
+						if(!empty($options[2])) $message .= '<input type="hidden" name="item_name_' . ($k+1) . '" value="' . SUPER_Common::email_tags($options[2], $data, $settings) . '">';
+						if(!empty($options[3])) $message .= '<input type="hidden" name="shipping_' . ($k+1) . '" value="' . SUPER_Common::email_tags($options[3], $data, $settings) . '">';
+						if(!empty($options[4])) $message .= '<input type="hidden" name="shipping2_' . ($k+1) . '" value="' . SUPER_Common::email_tags($options[4], $data, $settings) . '">';
+						if(!empty($options[5])) $message .= '<input type="hidden" name="discount_amount_' . ($k+1) . '" value="' . SUPER_Common::email_tags($options[5], $data, $settings) . '">';
+						if(!empty($options[6])) $message .= '<input type="hidden" name="discount_rate_' . ($k+1) . '" value="' . SUPER_Common::email_tags($options[6], $data, $settings) . '">';
 					}
 				}
 
 				// Subscriptions checkout
 				if ($cmd == '_xclick-subscriptions') {
-					if ($settings['paypal_item_name'] != '') {
+					if( !empty($settings['paypal_item_name']) ) {
 						// e.g: Alice\'s Weekly Digest
 						$message .= '<input type="hidden" name="item_name" value="' . esc_attr(SUPER_Common::email_tags($settings['paypal_item_name'], $data, $settings)) . '">';
 					}
-					if ($settings['paypal_item_number'] != '') {
+					if( !empty($settings['paypal_item_number']) ) {
 						// e.g: DIG Weekly
 						$message .= '<input type="hidden" name="item_number" value="' . esc_attr(SUPER_Common::email_tags($settings['paypal_item_number'], $data, $settings)) . '">';
 					}
@@ -1965,96 +2111,285 @@ if (!class_exists('SUPER_PayPal')):
 						'parent' => 'paypal_checkout',
 						'filter_value' => 'true',
 					),
-					'paypal_item_name' => array(
-						'name' => __( 'Item description (leave blank to let users enter a name)', 'super-forms' ),
-						'desc' => __( 'Description of item. If you omit this variable, buyers enter their own name during checkout.', 'super-forms' ),
-						'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_item_name', $settings['settings'], 'Flower (roses)' ),
-						'type' => 'text',
-						'filter' => true,
-						'parent' => 'paypal_payment_type',
-						'filter_value' => 'product,donation,subscription',
-					),
-					'paypal_item_amount' => array(
-						'name' => __( 'Item price (leave blank to let user enter their own price)', 'super-forms' ),
-						'desc' => __( 'The price or amount of the product, service, or contribution, not including shipping, handling, or tax. If you omit this variable from Buy Now or Donate buttons, buyers enter their own amount at the time of payment.', 'super-forms' ),
-						'label' => __( 'You are allowed to use {tags} if needed (only decimal format is allowed e.g: 16.95)', 'super-forms' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_item_amount', $settings['settings'], '5.00' ),
-						'type' => 'text',
-						'filter' => true,
-						'parent' => 'paypal_payment_type',
-						'filter_value' => 'product,donation',
-					),
-					'paypal_item_quantity' => array(
-						'name' => __( 'Quantity (Number of items)', 'super-forms' ),
-						'desc' => __( 'Note: The value for quantity must be a positive integer. Null, zero, or negative numbers are not allowed.', 'super-forms' ),
-						'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_item_quantity', $settings['settings'], '1' ),
-						'type' => 'text',
-						'filter' => true,
-						'parent' => 'paypal_payment_type',
-						'filter_value' => 'product,donation',
-					),
-					// Custom return URL
-					'paypal_custom_return_url' => array(
-						'default' => SUPER_Settings::get_value(0, 'paypal_custom_return_url', $settings['settings'], '' ),
-						'type' => 'checkbox',
-						'values' => array(
-							'true' => __( 'Enable custom return URL', 'super-forms' ),
+
+
+					// PRODUCT & DONATION CHECKOUT SETTINGS
+
+						// Item description
+						// Description of item. If you omit this variable, buyers enter their own name during checkout.
+						'paypal_item_name' => array(
+							'name' => __( 'Item description (leave blank to let users enter a name)', 'super-forms' ),
+							'desc' => __( 'Description of item. If you omit this variable, buyers enter their own name during checkout.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_item_name', $settings['settings'], 'Flower (roses)' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_payment_type',
+							'filter_value' => 'product,donation,subscription',
 						),
-						'filter' => true,
-						'parent' => 'paypal_checkout',
-						'filter_value' => 'true',
-					),
-					'paypal_return_url' => array(
-						'name' => __( 'PayPal return URL (when user successfully returns from paypal)', 'super-forms' ),
-						'desc' => __( 'The URL to which PayPal posts information about the payment, in the form of Instant Payment Notification messages.', 'super-forms' ),
-						'label' => __( 'User will be redirected to this URL after making a payment', 'super-forms' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_return_url', $settings['settings'], get_home_url() . '/my-custom-thank-you-page' ),
-						'type' => 'text',
-						'filter' => true,
-						'parent' => 'paypal_custom_return_url',
-						'filter_value' => 'true',
-					),
-					// Cancel URL when order was canceled by the user
-					'paypal_cancel_url' => array(
-						'name' => __( 'PayPal cancel URL (when payment is canceled by user)', 'super-forms' ),
-						'label' => __( 'User that cancels payment will be redirected to this URL', 'super-forms' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_cancel_url', $settings['settings'], get_home_url() . '/my-custom-canceled-page' ),
-						'type' => 'text',
-						'filter' => true,
-						'parent' => 'paypal_checkout',
-						'filter_value' => 'true',
-					),
 
-					// Subscription settings
-					'paypal_subscription_periods' => array(
-						'name' => __( 'Subscription periods', 'super-forms' ),
-						'desc' => __( 'Here you can setup the subscription price, time and periods', 'super-forms' ),
-						'label' => __( 'You are allowed to use {tags}<br />Put each period on a new line, seperate values by pipes, for example:<br /><strong>7 day trial for free:</strong> 0|7|D<br /><strong>After trial 3 weeks for 5 dollar:</strong> 5|3|W<br /><strong>After that $49.99 for each year:</strong> 49.99|1|Y<br /><strong>Time format options:</strong> D=days, W=weeks, M=months, Y=years', 'super-forms' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_subscription_periods', $settings['settings'], '' ),
-						'type' => 'textarea',
-						'placeholder' => "0|7|D\n5|3|W\n49.99|1|Y",
-						'filter' => true,
-						'parent' => 'paypal_payment_type',
-						'filter_value' => 'subscription',
-					),
-
-					// Cart items
-					'paypal_cart_items' => array(
-						'name' => __( 'Items to be added to cart', 'super-forms' ),
-						'desc' => __( 'Here you can enter the items that need to be added to the cart after form submission', 'super-forms' ),
-						'label' => __( 'You are allowed to use {tags}<br />Put each item on a new line, seperate values by pipes, for example:<br /><strong>Format:</strong> price|quantity|name<br /><strong>To add 5 times a 3.49 dollar product:</strong> 3.49|5|Flowers', 'super-forms' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_cart_items', $settings['settings'], '' ),
-						'type' => 'textarea',
-						'placeholder' => "3.49|5|Flowers\n7.25|3|Towels",
-						'filter' => true,
-						'parent' => 'paypal_payment_type',
-						'filter_value' => 'cart',
-					),
+						// Item price
+						// The price or amount of the product, service, or contribution, not including shipping, handling, or tax. If you omit this variable from Buy Now or Donate buttons, buyers enter their own amount at the time of payment.
+						'paypal_item_amount' => array(
+							'name' => __( 'Item price (leave blank to let user enter their own price)', 'super-forms' ),
+							'desc' => __( 'The price or amount of the product, service, or contribution, not including shipping, handling, or tax. If you omit this variable from Buy Now or Donate buttons, buyers enter their own amount at the time of payment.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed (only decimal format is allowed e.g: 16.95)', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_item_amount', $settings['settings'], '5.00' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_payment_type',
+							'filter_value' => 'product,donation',
+						),
 
 
-					// Advanced PayPal Settings
+					// SINGLE PRODUCT CHECKOUT SETTINGS
+
+						// Quantity (Number of items)
+						// Note: The value for quantity must be a positive integer. Null, zero, or negative numbers are not allowed.
+						'paypal_item_quantity' => array(
+							'name' => __( 'Quantity (Number of items)', 'super-forms' ),
+							'desc' => __( 'Note: The value for quantity must be a positive integer. Null, zero, or negative numbers are not allowed.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_item_quantity', $settings['settings'], '1' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_payment_type',
+							'filter_value' => 'product',
+						),
+
+						// Weight of item
+						// If profile-based shipping rates are configured with a basis of weight, the sum of weight values is used to calculate the shipping charges for the payment. A valid value is a decimal number with two significant digits to the right of the decimal point.
+						'paypal_item_weight' => array(
+							'name' => __( 'Weight of item (leave blank for none)', 'super-forms' ),
+							'desc' => __( 'If profile-based shipping rates are configured with a basis of weight, the sum of weight values is used to calculate the shipping charges for the payment. A valid value is a decimal number with two significant digits to the right of the decimal point.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_item_weight', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_payment_type',
+							'filter_value' => 'product',
+						),
+
+						// Item number (to track product or service)
+						// Pass-through variable for you to track product or service purchased or the contribution made. The value you specify is passed back to you upon payment completion.
+						'paypal_item_number' => array(
+							'name' => __( 'Item number (to track product or service)', 'super-forms' ),
+							'desc' => __( 'Pass-through variable for you to track product or service purchased or the contribution made. The value you specify is passed back to you upon payment completion.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_item_number', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_payment_type',
+							'filter_value' => 'product',
+						),
+
+						// Discount amount (leave blank for no discount)
+						// Discount amount associated with an item, which must be less than the selling price of the item.
+						'paypal_item_discount_amount' => array(
+							'name' => __( 'Discount amount (leave blank for no discount)', 'super-forms' ),
+							'desc' => __( 'Discount amount associated with an item, which must be less than the selling price of the item.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_item_discount_amount', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_payment_type',
+							'filter_value' => 'product',
+						),
+
+						// Discount rate (leave blank for no discount)
+						// Discount rate, as a percentage, associated with an item. Set to a value less than 100
+						'paypal_item_discount_rate' => array(
+							'name' => __( 'Discount rate (leave blank for no discount)', 'super-forms' ),
+							'desc' => __( 'Discount rate, as a percentage, associated with an item. Set to a value less than 100', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_item_discount_rate', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_payment_type',
+							'filter_value' => 'product',
+						),
+
+						// Discount number
+						// Number of additional quantities of the item to which the discount applies.
+						'paypal_item_discount_num' => array(
+							'name' => __( 'Discount number', 'super-forms' ),
+							'desc' => __( 'Number of additional quantities of the item to which the discount applies.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_item_discount_num', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_payment_type',
+							'filter_value' => 'product',
+						),
+
+						// Shipping cost. The cost of shipping this item. (applies to first item added to cart)
+						'paypal_item_shipping' => array(
+							'name' => __( 'Shipping cost (applies to first item added to cart)', 'super-forms' ),
+							'desc' => __( 'The cost of shipping this item.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_item_shipping', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_payment_type',
+							'filter_value' => 'product',
+						),
+						// Shipping cost. The cost of shipping this item. (applies to each additional item added to cart)
+						// The cost of shipping each additional unit of this item.
+						// If you omit this variable and profile-based shipping rates are configured, buyers are charged an amount according to the shipping methods they choose.
+						'paypal_item_shipping2' => array(
+							'name' => __( 'Shipping cost (applies to each additional item added to cart)', 'super-forms' ),
+							'desc' => __( 'The cost of shipping each additional unit of this item.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_item_shipping2', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_payment_type',
+							'filter_value' => 'product',
+						),
+
+
+					// GENERAL CHECKOUT SETTINGS
+
+						// Custom return URL
+						'paypal_custom_return_url' => array(
+							'default' => SUPER_Settings::get_value(0, 'paypal_custom_return_url', $settings['settings'], '' ),
+							'type' => 'checkbox',
+							'values' => array(
+								'true' => __( 'Enable custom return URL', 'super-forms' ),
+							),
+							'filter' => true,
+							'parent' => 'paypal_checkout',
+							'filter_value' => 'true',
+						),
+
+						// PayPal return URL
+						// The URL to which PayPal redirects buyers' browser after they complete their payments.
+						// For example, specify a URL on your site that displays a hank you for your payment page.
+						'paypal_return_url' => array(
+							'name' => __( 'PayPal return URL (when user successfully returns from paypal)', 'super-forms' ),
+							'desc' => __( 'The URL to which PayPal posts information about the payment, in the form of Instant Payment Notification messages.', 'super-forms' ),
+							'label' => __( 'User will be redirected to this URL after making a payment', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_return_url', $settings['settings'], get_home_url() . '/my-custom-thank-you-page' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_custom_return_url',
+							'filter_value' => 'true',
+						),
+
+						// Cancel URL when order was canceled by the user
+						// A URL to which PayPal redirects the buyers' browsers if they cancel checkout before completing their payments.
+						// For example, specify a URL on your website that displays the Payment Canceled page.
+						'paypal_cancel_url' => array(
+							'name' => __( 'PayPal cancel URL (when payment is canceled by user)', 'super-forms' ),
+							'label' => __( 'User that cancels payment will be redirected to this URL', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_cancel_url', $settings['settings'], get_home_url() . '/my-custom-canceled-page' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_checkout',
+							'filter_value' => 'true',
+						),
+
+
+
+					// SUBSCRIPTION CHECKOUT SETTINGS
+
+						// Subscription settings
+						'paypal_subscription_periods' => array(
+							'name' => __( 'Subscription periods', 'super-forms' ),
+							'desc' => __( 'Here you can setup the subscription price, time and periods', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags}<br />Put each period on a new line, seperate values by pipes, for example:<br /><strong>7 day trial for free:</strong> 0|7|D<br /><strong>After trial 3 weeks for 5 dollar:</strong> 5|3|W<br /><strong>After that $49.99 for each year:</strong> 49.99|1|Y<br /><strong>Time format options:</strong> D=days, W=weeks, M=months, Y=years', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_subscription_periods', $settings['settings'], '' ),
+							'type' => 'textarea',
+							'placeholder' => "0|7|D\n5|3|W\n49.99|1|Y",
+							'filter' => true,
+							'parent' => 'paypal_payment_type',
+							'filter_value' => 'subscription',
+						),
+
+
+
+					// CART CHECKOUT SETTINGS
+
+						// Cart items
+						// Items to be added to cart
+						// Here you can enter the items that need to be added to the cart after form submission
+						'paypal_cart_items' => array(
+							'name' => __( 'Items to be added to cart', 'super-forms' ),
+							'desc' => __( 'Here you can enter the items that need to be added to the cart after form submission', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags}<br />Put each item on a new line, seperate values by pipes, for example:<br /><strong>Format:</strong> price|quantity|name<br /><strong>To add 5 times a 3.49 dollar product:</strong> 3.49|5|Flowers', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_cart_items', $settings['settings'], '' ),
+							'type' => 'textarea',
+							'placeholder' => "3.49|5|Flowers\n7.25|3|Towels",
+							'filter' => true,
+							'parent' => 'paypal_payment_type',
+							'filter_value' => 'cart',
+						),
+
+						// Cart-wide tax, overriding any individual item tax_x value
+						'paypal_tax_cart' => array(
+							'name' => __( 'Cart tax', 'super-forms' ),
+							'desc' => __( 'Cart-wide tax, overriding any individual item tax value', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_tax_cart', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_payment_type',
+							'filter_value' => 'cart',
+						),
+
+						// If profile-based shipping rates are configured with a basis of weight, PayPal uses this value to calculate the shipping charges for the payment. This value overrides the weight values of individual items.
+						'paypal_weight_cart' => array(
+							'name' => __( 'Cart weight', 'super-forms' ),
+							'desc' => __( 'This value overrides the weight values of individual items. If profile-based shipping rates are configured with a basis of weight, PayPal uses this value to calculate the shipping charges for the payment.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_weight_cart', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_payment_type',
+							'filter_value' => 'cart',
+						),
+
+						// Single discount amount charged cart-wide.
+						// It must be less than the selling price of all items combined in the cart. This variable overrides any individual item discount_amount_x values, if present.
+						'paypal_discount_amount_cart' => array(
+							'name' => __( 'Cart discount amount', 'super-forms' ),
+							'desc' => __( 'Single discount amount charged cart-wide. It must be less than the selling price of all items combined in the cart.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_discount_amount_cart', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_payment_type',
+							'filter_value' => 'cart',
+						),
+
+						// Single Discount rate, as a percentage, to be charged cart-wide.
+						// Set to a value less than 100. The variable overrides any individual item discount_rate
+						'paypal_discount_rate_cart' => array(
+							'name' => __( 'Cart discount rate', 'super-forms' ),
+							'desc' => __( 'Single Discount rate, as a percentage, to be charged cart-wide. Set to a value less than 100. The variable overrides any individual item discount rate', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_discount_rate_cart', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_payment_type',
+							'filter_value' => 'cart',
+						),
+
+						// Single handling fee charged cart-wide. If handling_cart is used in multiple Add to Cart buttons, the handling_cart value of the first item is used.
+						'paypal_handling_cart' => array(
+							'name' => __( 'Cart handling fee', 'super-forms' ),
+							'desc' => __( 'Single handling fee charged cart-wide.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_handling_cart', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_payment_type',
+							'filter_value' => 'cart',
+						),
+
+
+
+					// ADVANCED PAYPAL SETTINGS
 					'paypal_advanced_settings' => array(
 						'default' => SUPER_Settings::get_value(0, 'paypal_advanced_settings', $settings['settings'], '' ),
 						'type' => 'checkbox',
@@ -2065,149 +2400,90 @@ if (!class_exists('SUPER_PayPal')):
 						'parent' => 'paypal_checkout',
 						'filter_value' => 'true',
 					),
-					'paypal_item_discount_amount' => array(
-						'name' => __( 'Discount amount (leave blank for no discount)', 'super-forms' ),
-						'desc' => __( 'Discount amount associated with an item, which must be less than the selling price of the item.', 'super-forms' ),
-						'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_item_discount_amount', $settings['settings'], '' ),
-						'type' => 'text',
-						'filter' => true,
-						'parent' => 'paypal_advanced_settings',
-						'filter_value' => 'true',
-					),
-					'paypal_item_discount_rate' => array(
-						'name' => __( 'Discount rate (leave blank for no discount)', 'super-forms' ),
-						'desc' => __( 'Discount rate, as a percentage, associated with an item. Set to a value less than 100', 'super-forms' ),
-						'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_item_discount_rate', $settings['settings'], '' ),
-						'type' => 'text',
-						'filter' => true,
-						'parent' => 'paypal_advanced_settings',
-						'filter_value' => 'true',
-					),
-					'paypal_item_discount_num' => array(
-						'name' => __( 'Discount number', 'super-forms' ),
-						'desc' => __( 'Number of additional quantities of the item to which the discount applies.', 'super-forms' ),
-						'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_item_discount_num', $settings['settings'], '' ),
-						'type' => 'text',
-						'filter' => true,
-						'parent' => 'paypal_advanced_settings',
-						'filter_value' => 'true',
-					),
-					'paypal_item_shipping' => array(
-						'name' => __( 'Shipping cost', 'super-forms' ),
-						'desc' => __( 'The cost of shipping this item.', 'super-forms' ),
-						'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_item_shipping', $settings['settings'], '' ),
-						'type' => 'text',
-						'filter' => true,
-						'parent' => 'paypal_advanced_settings',
-						'filter_value' => 'true',
-					),
-					'paypal_handling' => array(
-						'name' => __( 'Handling charges', 'super-forms' ),
-						'desc' => __( 'This variable is not quantity-specific. The same handling cost applies, regardless of the number of items on the order.', 'super-forms' ),
-						'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_handling', $settings['settings'], '' ),
-						'type' => 'text',
-						'filter' => true,
-						'parent' => 'paypal_advanced_settings',
-						'filter_value' => 'true',
-					),
-					'paypal_tax' => array(
-						'name' => __( 'Tax', 'super-forms' ),
-						'desc' => __( 'Set this variable to a flat tax amount to apply to the payment regardless of the buyer\'s location. This value overrides any tax settings set in your account profile.', 'super-forms' ),
-						'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_tax', $settings['settings'], '' ),
-						'type' => 'text',
-						'filter' => true,
-						'parent' => 'paypal_advanced_settings',
-						'filter_value' => 'true',
-					),
-					'paypal_tax_rate' => array(
-						'name' => __( 'Tax rate', 'super-forms' ),
-						'desc' => __( 'Set this variable to a percentage that applies to the amount multiplied by the quantity selected during checkout. This value overrides any tax settings set in your account profile', 'super-forms' ),
-						'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_tax_rate', $settings['settings'], '' ),
-						'type' => 'text',
-						'filter' => true,
-						'parent' => 'paypal_advanced_settings',
-						'filter_value' => 'true',
-					),
-					'paypal_item_number' => array(
-						'name' => __( 'Item number (to track product or service)', 'super-forms' ),
-						'desc' => __( 'Pass-through variable for you to track product or service purchased or the contribution made. The value you specify is passed back to you upon payment completion.', 'super-forms' ),
-						'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_item_number', $settings['settings'], '' ),
-						'type' => 'text',
-						'filter' => true,
-						'parent' => 'paypal_advanced_settings',
-						'filter_value' => 'true',
-					),
-					'paypal_undefined_quantity' => array(
-						'default' => SUPER_Settings::get_value(0, 'paypal_undefined_quantity', $settings['settings'], '' ),
-						'type' => 'checkbox',
-						'values' => array(
-							'true' => __( 'Allow buyers to specify the quantity', 'super-forms' ),
+
+						'paypal_handling' => array(
+							'name' => __( 'Handling charges', 'super-forms' ),
+							'desc' => __( 'This variable is not quantity-specific. The same handling cost applies, regardless of the number of items on the order.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_handling', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_advanced_settings',
+							'filter_value' => 'true',
 						),
-						'filter' => true,
-						'parent' => 'paypal_advanced_settings',
-						'filter_value' => 'true',
-					),
-					'paypal_item_weight' => array(
-						'name' => __( 'Weight of item', 'super-forms' ),
-						'desc' => __( 'If profile-based shipping rates are configured with a basis of weight, the sum of weight values is used to calculate the shipping charges for the payment. A valid value is a decimal number with two significant digits to the right of the decimal point.', 'super-forms' ),
-						'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_item_weight', $settings['settings'], '' ),
-						'type' => 'text',
-						'filter' => true,
-						'parent' => 'paypal_advanced_settings',
-						'filter_value' => 'true',
-					),
-					'paypal_weight_unit' => array(
-						'name' => __( 'Select weight unit', 'super-forms' ),
-						'desc' => __( 'The unit of measure if weight is specified.', 'super-forms' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_weight_unit', $settings['settings'], 'lbs' ),
-						'type' => 'select',
-						'values' => array(
-							'lbs' => 'lbs (default)',
-							'kgs' => 'kgs',
+						'paypal_tax' => array(
+							'name' => __( 'Tax', 'super-forms' ),
+							'desc' => __( 'Set this variable to a flat tax amount to apply to the payment regardless of the buyer\'s location. This value overrides any tax settings set in your account profile.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_tax', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_advanced_settings',
+							'filter_value' => 'true',
 						),
-						'filter' => true,
-						'parent' => 'paypal_advanced_settings',
-						'filter_value' => 'true',
-					),
-					'paypal_invoice' => array(
-						'name' => __( 'Invoice number', 'super-forms' ),
-						'desc' => __( 'Use to identify your invoice number for this purchase.', 'super-forms' ),
-						'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_invoice', $settings['settings'], '' ),
-						'type' => 'text',
-						'filter' => true,
-						'parent' => 'paypal_advanced_settings',
-						'filter_value' => 'true',
-					),
-					'paypal_completed_entry_status' => array(
-						'name' => __( 'Entry status after payment completed', 'super-forms' ),
-						'label' => sprintf(__( 'You can add custom statuses via %sSuper Forms > Settings > Backend Settings%s if needed', 'super-forms' ), '<a target="blank" href="' . admin_url() . 'admin.php?page=super_settings#backend">', '</a>' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_completed_entry_status', $settings['settings'], 'completed' ),
-						'type' => 'select',
-						'values' => $statuses,
-						'filter' => true,
-						'parent' => 'paypal_checkout',
-						'filter_value' => 'true',
-					),
-					// Notify URL (for paypal IPN)
-					'paypal_notify_url' => array(
-						'name' => __( 'PayPal notify URL (only for developers!)', 'super-forms' ),
-						'label' => __( 'Used for IPN (Instant payment notifications) when payment is confirmed by paypal', 'super-forms' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_notify_url', $settings['settings'], '' ),
-						'type' => 'text',
-						'filter' => true,
-						'parent' => 'paypal_advanced_settings',
-						'filter_value' => 'true',
-					),
+						'paypal_tax_rate' => array(
+							'name' => __( 'Tax rate', 'super-forms' ),
+							'desc' => __( 'Set this variable to a percentage that applies to the amount multiplied by the quantity selected during checkout. This value overrides any tax settings set in your account profile', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_tax_rate', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_advanced_settings',
+							'filter_value' => 'true',
+						),
+						'paypal_undefined_quantity' => array(
+							'default' => SUPER_Settings::get_value(0, 'paypal_undefined_quantity', $settings['settings'], '' ),
+							'type' => 'checkbox',
+							'values' => array(
+								'true' => __( 'Allow buyers to specify the quantity', 'super-forms' ),
+							),
+							'filter' => true,
+							'parent' => 'paypal_advanced_settings',
+							'filter_value' => 'true',
+						),
+						'paypal_weight_unit' => array(
+							'name' => __( 'Select weight unit', 'super-forms' ),
+							'desc' => __( 'The unit of measure if weight is specified.', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_weight_unit', $settings['settings'], 'lbs' ),
+							'type' => 'select',
+							'values' => array(
+								'lbs' => 'lbs (default)',
+								'kgs' => 'kgs',
+							),
+							'filter' => true,
+							'parent' => 'paypal_advanced_settings',
+							'filter_value' => 'true',
+						),
+						'paypal_invoice' => array(
+							'name' => __( 'Invoice number', 'super-forms' ),
+							'desc' => __( 'Use to identify your invoice number for this purchase.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_invoice', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_advanced_settings',
+							'filter_value' => 'true',
+						),
+						'paypal_completed_entry_status' => array(
+							'name' => __( 'Entry status after payment completed', 'super-forms' ),
+							'label' => sprintf(__( 'You can add custom statuses via %sSuper Forms > Settings > Backend Settings%s if needed', 'super-forms' ), '<a target="blank" href="' . admin_url() . 'admin.php?page=super_settings#backend">', '</a>' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_completed_entry_status', $settings['settings'], 'completed' ),
+							'type' => 'select',
+							'values' => $statuses,
+							'filter' => true,
+							'parent' => 'paypal_checkout',
+							'filter_value' => 'true',
+						),
+						'paypal_notify_url' => array(
+							'name' => __( 'PayPal notify URL (only for developers!)', 'super-forms' ),
+							'label' => __( 'Used for IPN (Instant payment notifications) when payment is confirmed by paypal', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_notify_url', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_advanced_settings',
+							'filter_value' => 'true',
+						),
+						
 					/*
 					'paypal_checkout_products' => array(
 					'name' => __( 'Enter the product(s) ID that needs to be added to the cart', 'super-forms' ) . '<br /><i>' . __( 'If field is inside dynamic column, system will automatically add all the products. Put each product ID with it\'s quantity on a new line separated by pipes "|".<br /><strong>Example with tags:</strong> {id}|{quantity}<br /><strong>Example without tags:</strong> 82921|3<br /><strong>Example with variations:</strong> {id}|{quantity}|{variation_id}<br /><strong>Example with dynamic pricing:</strong> {id}|{quantity}|none|{price}<br /><strong>Allowed values:</strong> integer|integer|integer|float<br />(dynamic pricing requires <a target="_blank" href="https://paypal.com/products/name-your-price/">PayPal Name Your Price add-on</a>).', 'super-forms' ) . '</i>',
