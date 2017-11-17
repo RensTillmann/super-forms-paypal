@@ -219,7 +219,7 @@ if (!class_exists('SUPER_PayPal')):
 			// Actions since 1.0.0
 			add_action( 'init', array( $this, 'register_post_types' ), 5 );
 			//add_action( 'super_front_end_posting_after_insert_post_action', array( $this, 'save_wc_order_post_session_data' ) );
-			add_action( 'super_after_wp_insert_user_action', array( $this, 'save_wc_order_signup_session_data'));
+			//add_action( 'super_after_wp_insert_user_action', array( $this, 'save_wc_order_signup_session_data'));
 			add_action( 'paypal_checkout_update_order_meta', array( $this, 'update_order_meta' ), 10, 1 );
 			add_action( 'parse_request', array( $this, 'paypal_ipn'));
 
@@ -288,14 +288,6 @@ if (!class_exists('SUPER_PayPal')):
                     echo '</p>';
                 echo '</div>';
             }
-            $sac = get_option('sac_' . $this->add_on_slug, 0);
-			if ($sac != 1) {
-				echo '<div class="notice notice-error">'; // notice-success
-				echo '<p>';
-				echo sprintf(__( '%sPlease note:%s You are missing out on important updates for %s! Please %sactivate your copy%s to receive automatic updates.', 'super_forms' ), '<strong>', '</strong>', 'Super Forms - ' . $this->add_on_name, '<a href="' . admin_url() . 'admin.php?page=super_settings#activate">', '</a>');
-				echo '</p>';
-				echo '</div>';
-			}
 		}
 
 
@@ -306,14 +298,10 @@ if (!class_exists('SUPER_PayPal')):
 		 */
 		function update_plugin(){
 			if (defined('SUPER_PLUGIN_DIR')) {
-				$sac = get_option('sac_' . $this->add_on_slug, 0);
-				if ($sac == 1) {
-					require_once (SUPER_PLUGIN_DIR . '/includes/admin/update-super-forms.php');
-
-					$plugin_remote_path = 'http://f4d.nl/super-forms/';
-					$plugin_slug = plugin_basename(__FILE__);
-					new SUPER_WP_AutoUpdate($this->version, $plugin_remote_path, $plugin_slug, '', '', $this->add_on_slug);
-				}
+				require_once (SUPER_PLUGIN_DIR . '/includes/admin/update-super-forms.php');
+				$plugin_remote_path = 'http://f4d.nl/super-forms/';
+				$plugin_slug = plugin_basename(__FILE__);
+				new SUPER_WP_AutoUpdate($this->version, $plugin_remote_path, $plugin_slug, '', '', $this->add_on_slug);
 			}
 		}
 
@@ -927,10 +915,17 @@ if (!class_exists('SUPER_PayPal')):
 		                                    <div class="submitbox" id="submitpost">
 		                                        <div id="minor-publishing">
 		                                            <div class="misc-pub-section">
+														<?php 
+														$currency_code = self::get_currency_code($txn_data);
+														$mc_gross = number_format_i18n($txn_data['mc_gross'], 2) . ' ' . $currency_code;
+														?>
+		                                                <span><?php echo __( 'Gross amount', 'super-forms' ) . ':'; ?> <strong><?php echo $mc_gross; ?></strong></span>
+		                                            </div>
+		                                            <div class="misc-pub-section">
 		                                                <span><?php echo __( 'Transaction ID', 'super-forms' ) . ':'; ?> <strong><?php echo get_the_title($id); ?></strong></span>
 		                                            </div>
 													<div class="misc-pub-section">
-		                                                <span><?php echo __( 'Status', 'super-forms' ) . ':'; ?> <strong><?php echo $txn_data['payment_status']; ?></strong></span>
+		                                                <span><?php echo __( 'Payment status', 'super-forms' ) . ':'; ?> <strong><?php echo $txn_data['payment_status']; ?></strong></span>
 		                                            </div>
 													<div class="misc-pub-section">
 		                                                <span><?php echo __( 'Payer E-mail', 'super-forms' ) . ':'; ?> <strong><?php echo $txn_data['payer_email']; ?></strong></span>
@@ -997,37 +992,54 @@ if (!class_exists('SUPER_PayPal')):
 		                    </div>
 		                    
 		                    <div id="postbox-container-2" class="postbox-container">
-		                        <div id="normal-sortables" class="meta-box-sortables ui-sortable">
-		                            <div id="super-contact-entry-data" class="postbox ">
-		                                <div class="handlediv" title="">
-		                                    <br>
-		                                </div>
-		                                <h3 class="hndle ui-sortable-handle">
-		                                    <span><?php echo __('Order details', 'super-forms' ); ?>:</span>
-		                                </h3>
-		                                <div class="inside">
-		                                    <?php
-											// Get currency code e.g: EUR
-											$currency_code = self::get_currency_code($txn_data);
-		                                    $mc_gross = number_format_i18n($txn_data['mc_gross'], 2) . ' ' . $currency_code;
-		                                    echo '<table style="width:100%">';
-		                                    	echo '<tr><th align="left">Item name</th><th align="right">Quantity</th><th align="right">Price</th><th align="right">Subtotal</th></tr>';
-	                                            $i = 1;
-	                                            while( isset($txn_data['item_name' . $i])) {
-	                                                echo '<tr>';
-	                                                echo '<td align="left">' . $txn_data['item_name' . $i] . '</td>';
-	                                                echo '<td align="right">' . $txn_data['quantity' . $i] . '</td>';
-	                                                echo '<td align="right">' . number_format_i18n(($txn_data['mc_gross_' . $i]/$txn_data['quantity' . $i]), 2) . ' ' . $currency_code . '</td>';
-	                                                echo '<td align="right">' . number_format_i18n($txn_data['mc_gross_' . $i], 2) . ' ' . $currency_code . '</td>';
-	                                                echo '</tr>';
-	                                                $i++;
-	                                            }
-		                                    	echo '<tr><th colspan="3" align="right">Purchase total</th><td align="right">' . $mc_gross . '</td></tr>';
-		                                    echo '</table>';
-		                                    ?>
-		                                </div>
-		                            </div>
-		                        </div>
+		                        <?php
+
+								// Get currency code e.g: EUR
+								$currency_code = self::get_currency_code($txn_data);
+								$mc_gross = number_format_i18n($txn_data['mc_gross'], 2) . ' ' . $currency_code;
+
+		                        if( $txn_data['txn_type']!='subscr_payment' ) {
+		                        	?>
+			                        <div id="normal-sortables" class="meta-box-sortables ui-sortable">
+			                            <div id="super-contact-entry-data" class="postbox ">
+			                                <div class="handlediv" title="">
+			                                    <br>
+			                                </div>
+			                                <h3 class="hndle ui-sortable-handle">
+			                                    <span><?php echo __('Order details', 'super-forms' ); ?>:</span>
+			                                </h3>
+			                                <div class="inside">
+			                                    <?php
+			                                    echo '<table style="width:100%">';
+			                                    	echo '<tr><th align="left">Item name</th><th align="right">Quantity</th><th align="right">Price</th><th align="right">Subtotal</th></tr>';
+		                                            if(isset($txn_data['item_name'])){
+		                                                echo '<tr>';
+		                                                echo '<td align="left">' . $txn_data['item_name'] . '</td>';
+		                                                echo '<td align="right">1</td>';
+		                                                echo '<td align="right">' . number_format_i18n($txn_data['mc_gross'], 2) . ' ' . $currency_code . '</td>';
+		                                                echo '<td align="right">' . number_format_i18n($txn_data['mc_gross'], 2) . ' ' . $currency_code . '</td>';
+		                                                echo '</tr>';
+		                                            }else{
+		                                            	$i = 1;
+			                                            while( isset($txn_data['item_name' . $i])) {
+			                                                echo '<tr>';
+			                                                echo '<td align="left">' . $txn_data['item_name' . $i] . '</td>';
+			                                                echo '<td align="right">' . $txn_data['quantity' . $i] . '</td>';
+			                                                echo '<td align="right">' . number_format_i18n(($txn_data['mc_gross_' . $i]/$txn_data['quantity' . $i]), 2) . ' ' . $currency_code . '</td>';
+			                                                echo '<td align="right">' . number_format_i18n($txn_data['mc_gross_' . $i], 2) . ' ' . $currency_code . '</td>';
+			                                                echo '</tr>';
+			                                                $i++;
+			                                            }
+			                                        }
+			                                    	echo '<tr><th colspan="3" align="right">Purchase total</th><td align="right">' . $mc_gross . '</td></tr>';
+			                                    echo '</table>';
+			                                    ?>
+			                                </div>
+			                            </div>
+			                        </div>
+			                        <?php
+			                    }
+			                    ?>
 
 		                        <div id="normal-sortables" class="meta-box-sortables ui-sortable">
 		                            <div id="super-contact-entry-data" class="postbox ">
@@ -1039,39 +1051,89 @@ if (!class_exists('SUPER_PayPal')):
 		                                </h3>
 		                                <div class="inside">
 		                                    <?php
-		                                    echo '<table>';
-		                                    echo '<tr><th align="right">Purchase total</th><td align="right">' . $mc_gross . '</td></tr>';
-		                                    echo '<tr><th align="right">Sales tax</th><td align="right"></td></tr>';
-		                                    echo '<tr><th align="right">Shipping amount</th><td align="right">' . number_format_i18n($txn_data['mc_shipping'], 2) . ' ' . $currency_code . '</td></tr>';
-		                                    echo '<tr><th align="right">Handling amount</th><td align="right"></td></tr>';
-		                                    echo '<tr><th align="right">Insurance</th><td align="right">' . number_format_i18n($txn_data['insurance_amount'], 2) . ' ' . $currency_code . '</td></tr>'; 
-		                                    echo '<tr><th align="right">Gross amount</th><td align="right">' . $mc_gross . '</td></tr>';
-		                                    echo '<tr><th align="right">PayPal fee</th><td align="right">' . number_format_i18n($txn_data['mc_fee'], 2) . ' ' . $currency_code . '</td></tr>';
-		                                    echo '<tr><th align="right">Net amount</th><td align="right">' . number_format_i18n(($txn_data['mc_gross']-$txn_data['mc_fee']), 2) . ' ' . $currency_code . '</td></tr>';
-		                                    echo '</table>';
-
-		                                    if( (isset($txn_data['invoice'])) && ($txn_data['invoice']!='') ) {
-		                                    	echo '<table>';
-												echo '<tr><th>Invoice ID</th><td>' . $txn_data['invoice'] . '</td></tr>';
-		                                    	echo '</table>';
-		                                    }
-
-	                                    	echo '<table>';
-											echo '<tr>';
-												echo '<th valign="top">Paid by</th>';
-												echo '<td>';
-													echo $txn_data['first_name'] . ' ' . $txn_data['last_name'] . '<br />';
-													echo 'The sender of this payment has <strong>verified their account and is located outside the US.</strong><br />';
-													echo $txn_data['payer_email'];
-												echo '</td>';
+											if( $txn_data['address_country_code']=='US' ) {
+												$located = 'inside';
+											}else{
+												$located = 'outside';
+											}
+											if( $txn_data['payer_status']=='verified' ) {
+												$verified = '';
+												$color = 'green';
+											}else{
+												$verified = 'NOT ';
+												$color = 'red';
+											}
+											$verified_text = $txn_data['first_name'] . ' ' . $txn_data['last_name'] . '<br />';
+											$verified_text .= 'The sender of this payment has <strong style="color:' . $color . ';">' . $verified . 'verified their account and is located ' . $located . ' the US.</strong><br />';
+											$verified_text .= $txn_data['payer_email'];
+											if( $txn_data['txn_type']=='subscr_payment' ) {
+			                                    echo '<table>';
+			                                    echo '<tr><th align="left">Gross amount</th><td align="right">' . $mc_gross . '</td></tr>';
+			                                    echo '<tr><th align="left">PayPal fee</th><td align="right">' . number_format_i18n($txn_data['mc_fee'], 2) . ' ' . $currency_code . '</td></tr>';
+			                                    echo '<tr><th align="left">Net amount</th><td align="right">' . number_format_i18n(($txn_data['mc_gross']-$txn_data['mc_fee']), 2) . ' ' . $currency_code . '</td></tr>';
+			                                    echo '</table>';
+			                                    echo '<table>';
+			                                    echo '<tr><th align="left">Recurring Payment ID</th><td align="left">' . $txn_data['subscr_id'] . '</td></tr>';
+			                                    echo '<tr><th align="left">Reason</th><td align="left">Recurring</td></tr>';
+												echo '<tr>';
+													echo '<th align="left" valign="top">Paid by</th>';
+													echo '<td>';
+														echo $verified_text;
+													echo '</td>';
 												echo '</tr>';
-	                                    	echo '</table>';
-
+			                                    echo '<tr><th align="left">Memo</th><td align="left">' . $txn_data['item_name'] . '</td></tr>';
+			                                    echo '</table>';
+		                                    }else{
+			                                    echo '<table>';
+			                                    echo '<tr><th align="right">Purchase total</th><td align="right">' . $mc_gross . '</td></tr>';
+			                                    echo '<tr><th align="right">Sales tax</th><td align="right"></td></tr>';
+			                                    echo '<tr><th align="right">Shipping amount</th><td align="right">' . (isset($txn_data['mc_shipping']) ? number_format_i18n($txn_data['mc_shipping'], 2) : number_format_i18n(0, 2)) . ' ' . $currency_code . '</td></tr>';
+			                                    echo '<tr><th align="right">Handling amount</th><td align="right"></td></tr>';
+			                                    echo '<tr><th align="right">Insurance</th><td align="right">' . (isset($txn_data['insurance_amount']) ? number_format_i18n($txn_data['insurance_amount'], 2) : number_format_i18n(0, 2)) . ' ' . $currency_code . '</td></tr>'; 
+			                                    echo '<tr><th align="right">Gross amount</th><td align="right">' . $mc_gross . '</td></tr>';
+			                                    echo '<tr><th align="right">PayPal fee</th><td align="right">' . number_format_i18n($txn_data['mc_fee'], 2) . ' ' . $currency_code . '</td></tr>';
+			                                    echo '<tr><th align="right">Net amount</th><td align="right">' . number_format_i18n(($txn_data['mc_gross']-$txn_data['mc_fee']), 2) . ' ' . $currency_code . '</td></tr>';
+			                                    if( (isset($txn_data['invoice'])) && ($txn_data['invoice']!='') ) {
+													echo '<tr><th>Invoice ID</th><td>' . $txn_data['invoice'] . '</td></tr>';
+			                                    }
+												echo '</table>';
+			                                    echo '<table>';
+												echo '<tr>';
+													echo '<th valign="top">Paid by</th>';
+													echo '<td>';
+														echo $verified_text;
+													echo '</td>';
+												echo '</tr>';
+												echo '</table>';
+		                                    }
 		                                    ?>
 		                                </div>
 		                            </div>
 		                        </div>
 
+		                        <div id="normal-sortables" class="meta-box-sortables ui-sortable">
+		                            <div id="super-contact-entry-data" class="postbox ">
+		                                <div class="handlediv" title="">
+		                                    <br>
+		                                </div>
+		                                <h3 class="hndle ui-sortable-handle">
+		                                    <span><?php echo __('Address', 'super-forms' ); ?>:</span>
+		                                </h3>
+		                                <div class="inside">
+		                                    <?php
+		                                    echo '<table>';
+		                                    echo '<tr><th align="left">Name</th><td align="left">' . $txn_data['address_name'] . '</td></tr>';
+		                                    echo '<tr><th align="left">Street</th><td align="left">' . $txn_data['address_street'] . '</td></tr>';
+		                                    echo '<tr><th align="left">Zipcode</th><td align="left">' . $txn_data['address_zip'] . '</td></tr>';
+		                                    echo '<tr><th align="left">City</th><td align="left">' . $txn_data['address_city'] . '</td></tr>';
+		                                    echo '<tr><th align="left">State</th><td align="left">' . $txn_data['address_state'] . '</td></tr>';
+		                                    echo '<tr><th align="left">Country</th><td align="left">' . $txn_data['address_country'] . ' (' . $txn_data['address_country_code'] . ')</td></tr>';
+		                                    echo '<tr><th align="left">Address status</th><td align="left">' . $txn_data['address_status'] . '</td></tr>';
+		                                    echo '</table>';
+		                                    ?>
+		                                </div>
+		                            </div>
+		                        </div>
 
 		                        <div id="normal-sortables" class="meta-box-sortables ui-sortable">
 		                            <div id="super-contact-entry-data" class="postbox ">
@@ -1809,7 +1871,7 @@ if (!class_exists('SUPER_PayPal')):
 				// 1. Do not prompt for an address.
 				// 2. Prompt for an address and require one.
 				if( !empty($settings['paypal_no_shipping']) ) {
-					$message .= '<input type="hidden" name="no_shipping" value="2">';
+					$message .= '<input type="hidden" name="no_shipping" value="' . $settings['paypal_no_shipping'] . '">';
 				}
 
 				// The URL to which PayPal redirects buyers' browser after they complete their payments. For example, specify a URL on your site that displays a hank you for your payment page.
@@ -1831,6 +1893,20 @@ if (!class_exists('SUPER_PayPal')):
 				if( !empty($settings['paypal_invoice']) ) {
 					$message .= '<input type="hidden" name="invoice" value="' . SUPER_Common::email_tags($settings['paypal_invoice'], $data, $settings) . '">';
 				}
+
+
+				if( (!empty($settings['paypal_custom_address'])) && ($settings['paypal_custom_address']=='true') ) {
+					$message .= '<input type="hidden" name="first_name" value="' . SUPER_Common::email_tags($settings['paypal_first_name'], $data, $settings) . '">';
+					$message .= '<input type="hidden" name="last_name" value="' . SUPER_Common::email_tags($settings['paypal_last_name'], $data, $settings) . '">';
+					$message .= '<input type="hidden" name="email" value="' . SUPER_Common::email_tags($settings['paypal_email'], $data, $settings) . '">';
+					$message .= '<input type="hidden" name="address1" value="' . SUPER_Common::email_tags($settings['paypal_address1'], $data, $settings) . '">';
+					$message .= '<input type="hidden" name="address2" value="' . SUPER_Common::email_tags($settings['paypal_address2'], $data, $settings) . '">';
+					$message .= '<input type="hidden" name="city" value="' . SUPER_Common::email_tags($settings['paypal_city'], $data, $settings) . '">';
+					$message .= '<input type="hidden" name="state" value="' . SUPER_Common::email_tags($settings['paypal_state'], $data, $settings) . '">';
+					$message .= '<input type="hidden" name="zip" value="' . SUPER_Common::email_tags($settings['paypal_zip'], $data, $settings) . '">';
+					$message .= '<input type="hidden" name="country" value="' . SUPER_Common::email_tags($settings['paypal_country'], $data, $settings) . '">';
+				}
+
 
 				if ($cmd == '_cart') {
 					// tax_cart
@@ -2022,6 +2098,8 @@ if (!class_exists('SUPER_PayPal')):
 				//    $message .= '<input type="hidden" name="zip" value="' . $paypal_values['zip'] . '" />';
 				//    $message .= '<input type="hidden" name="country" value="' . $paypal_values['country'] . '" />';
 				// }
+
+
 				$message .= '<input type="submit" value="Pay with PayPal!" style="display:none;">';
 				$message .= '</form>';
 				$message .= '<script data-cfasync="false" type="text/javascript" language="javascript">';
@@ -2097,6 +2175,22 @@ if (!class_exists('SUPER_PayPal')):
 						'parent' => 'paypal_checkout',
 						'filter_value' => 'true',
 					),
+
+					// Select wether or not to prompt buyers for a shipping address
+					'paypal_no_shipping' => array(
+						'name' => __( 'Select whether or not to prompt buyers for a shipping address.', 'super-forms' ),
+						'default' => SUPER_Settings::get_value(0, 'paypal_no_shipping', $settings['settings'], '0' ),
+						'type' => 'select',
+						'values' => array(
+							'0' => 'Prompt for an address, but do not require one.',
+							'1' => 'Do not prompt for an address.',
+							'2' => 'Prompt for an address and require one.',
+						),
+						'filter' => true,
+						'parent' => 'paypal_checkout',
+						'filter_value' => 'true',
+					),
+
 					'paypal_payment_type' => array(
 						'name' => __( 'PayPal payment method', 'super-forms' ),
 						'default' => SUPER_Settings::get_value(0, 'paypal_payment_type', $settings['settings'], '_xclick' ),
@@ -2401,6 +2495,26 @@ if (!class_exists('SUPER_PayPal')):
 						'filter_value' => 'true',
 					),
 
+						'paypal_lc' => array(
+							'name' => __( 'Language for the billing information/log-in page', 'super-forms' ),
+							'desc' => __( 'Sets the language for the billing information/log-in page only. Default is US.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed<br />For valid values, see <a href="https://developer.paypal.com/docs/classic/api/country_codes/">Countries and Regions Supported by PayPal</a>.', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_lc', $settings['settings'], 'US' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_advanced_settings',
+							'filter_value' => 'true',
+						),
+						'paypal_charset' => array(
+							'name' => __( 'Character set and character encoding for the billing information/log-in page', 'super-forms' ),
+							'desc' => __( 'Sets the character set and character encoding for the billing information/log-in page on the PayPal website. In addition, this variable sets the same values for information that you send to PayPal in your HTML button code. Default is based on the language encoding settings in your account profile.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed<br />For valid values, see <a href="https://developer.paypal.com/docs/classic/paypal-payments-standard/integration-guide/formbasics/#setting-the-character-set--charset">Setting the Character Set — charset</a>.', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_charset', $settings['settings'], 'UTF-8' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_advanced_settings',
+							'filter_value' => 'true',
+						),
 						'paypal_handling' => array(
 							'name' => __( 'Handling charges', 'super-forms' ),
 							'desc' => __( 'This variable is not quantity-specific. The same handling cost applies, regardless of the number of items on the order.', 'super-forms' ),
@@ -2464,91 +2578,167 @@ if (!class_exists('SUPER_PayPal')):
 							'parent' => 'paypal_advanced_settings',
 							'filter_value' => 'true',
 						),
-						'paypal_completed_entry_status' => array(
-							'name' => __( 'Entry status after payment completed', 'super-forms' ),
-							'label' => sprintf(__( 'You can add custom statuses via %sSuper Forms > Settings > Backend Settings%s if needed', 'super-forms' ), '<a target="blank" href="' . admin_url() . 'admin.php?page=super_settings#backend">', '</a>' ),
-							'default' => SUPER_Settings::get_value(0, 'paypal_completed_entry_status', $settings['settings'], 'completed' ),
-							'type' => 'select',
-							'values' => $statuses,
-							'filter' => true,
-							'parent' => 'paypal_checkout',
-							'filter_value' => 'true',
-						),
-						'paypal_notify_url' => array(
-							'name' => __( 'PayPal notify URL (only for developers!)', 'super-forms' ),
-							'label' => __( 'Used for IPN (Instant payment notifications) when payment is confirmed by paypal', 'super-forms' ),
-							'default' => SUPER_Settings::get_value(0, 'paypal_notify_url', $settings['settings'], '' ),
+						'paypal_night_phone_a' => array(
+							'name' => __( 'The area code for U.S. phone numbers, or the country code for phone numbers outside the U.S.', 'super-forms' ),
+							'desc' => __( 'PayPal fills in the buyer\'s home phone number automatically.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_night_phone_a', $settings['settings'], 'UTF-8' ),
 							'type' => 'text',
 							'filter' => true,
 							'parent' => 'paypal_advanced_settings',
 							'filter_value' => 'true',
 						),
+						'night_phone_b' => array(
+							'name' => __( 'The three-digit prefix for U.S. phone numbers, or the entire phone number for phone numbers outside the U.S., excluding country code.', 'super-forms' ),
+							'desc' => __( 'PayPal fills in the buyer\'s home phone number automatically.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'night_phone_b', $settings['settings'], 'UTF-8' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_advanced_settings',
+							'filter_value' => 'true',
+						),
+						'night_phone_c' => array(
+							'name' => __( 'The four-digit phone number for U.S. phone numbers.', 'super-forms' ),
+							'desc' => __( 'PayPal fills in the buyer\'s home phone number automatically.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'night_phone_c', $settings['settings'], 'UTF-8' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_advanced_settings',
+							'filter_value' => 'true',
+						),
+
+
 						
-					/*
-					'paypal_checkout_products' => array(
-					'name' => __( 'Enter the product(s) ID that needs to be added to the cart', 'super-forms' ) . '<br /><i>' . __( 'If field is inside dynamic column, system will automatically add all the products. Put each product ID with it\'s quantity on a new line separated by pipes "|".<br /><strong>Example with tags:</strong> {id}|{quantity}<br /><strong>Example without tags:</strong> 82921|3<br /><strong>Example with variations:</strong> {id}|{quantity}|{variation_id}<br /><strong>Example with dynamic pricing:</strong> {id}|{quantity}|none|{price}<br /><strong>Allowed values:</strong> integer|integer|integer|float<br />(dynamic pricing requires <a target="_blank" href="https://paypal.com/products/name-your-price/">PayPal Name Your Price add-on</a>).', 'super-forms' ) . '</i>',
-					'desc' => __( 'Put each on a new line, {tags} can be used to retrieve data', 'super-forms' ),
-					'type' => 'textarea',
-					'default' => SUPER_Settings::get_value( 0, 'paypal_checkout_products', $settings['settings'], "{id}|{quantity}|none|{price}" ),
-					'filter' => true,
-					'parent' => 'paypal_checkout',
-					'filter_value' => 'true',
+					// ADDRESS PAYPAL SETTINGS
+					'paypal_custom_address' => array(
+						'desc' => __( 'Parse the entered address information to paypal. This will not override the PayPal member\'s default address unless you enable the \'Override\' option below.', 'super-forms' ),
+						'default' => SUPER_Settings::get_value(0, 'paypal_custom_address', $settings['settings'], '' ),
+						'type' => 'checkbox',
+						'values' => array(
+							'true' => __( 'Parse address to paypal based on form input data.', 'super-forms' ),
+						),
+						'filter' => true,
+						'parent' => 'paypal_checkout',
+						'filter_value' => 'true',
 					),
-					'paypal_checkout_coupon' => array(
-					'name' => __( 'Apply the following coupon code (leave blank for none):', 'super-forms' ),
-					'default' => SUPER_Settings::get_value( 0, 'paypal_checkout_coupon', $settings['settings'], '' ),
-					'type' => 'text',
-					'filter' => true,
-					'parent' => 'paypal_checkout',
-					'filter_value' => 'true',
+
+						'paypal_address_override' => array(
+							'desc' => __( 'The address specified with automatic fill-in variables overrides the PayPal member\'s stored address. Buyers see the addresses that you pass in, but they cannot edit them. PayPal does not show addresses if they are invalid or omitted.', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_address_override', $settings['settings'], '' ),
+							'type' => 'checkbox',
+							'values' => array(
+								'true' => __( 'Override the PayPal member\'s stored address', 'super-forms' ),
+							),
+							'filter' => true,
+							'parent' => 'paypal_custom_address',
+							'filter_value' => 'true',
+						),
+						'paypal_first_name' => array(
+							'name' => __( 'First name', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_first_name', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_custom_address',
+							'filter_value' => 'true',
+						),
+						'paypal_last_name' => array(
+							'name' => __( 'Last name', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_last_name', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_custom_address',
+							'filter_value' => 'true',
+						),
+						'paypal_email' => array(
+							'name' => __( 'Email address', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_email', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_custom_address',
+							'filter_value' => 'true',
+						),
+						'paypal_address1' => array(
+							'name' => __( 'Street (1 of 2 fields)', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_address1', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_custom_address',
+							'filter_value' => 'true',
+						),
+						'paypal_address2' => array(
+							'name' => __( 'Street (2 of 2 fields)', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_address2', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_custom_address',
+							'filter_value' => 'true',
+						),
+						'paypal_city' => array(
+							'name' => __( 'City', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_city', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_custom_address',
+							'filter_value' => 'true',
+						),
+						'paypal_state' => array(
+							'name' => __( 'U.S. state', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_state', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_custom_address',
+							'filter_value' => 'true',
+						),
+						'paypal_zip' => array(
+							'name' => __( 'Postal code', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_zip', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_custom_address',
+							'filter_value' => 'true',
+						),
+						'paypal_country' => array(
+							'name' => __( 'Shipping and billing country', 'super-forms' ),
+							'desc' => __( 'Sets shipping and billing country.', 'super-forms' ),
+							'label' => __( 'You are allowed to use {tags} if needed<br />For valid values, see <a target="_blank" href="https://developer.paypal.com/docs/classic/api/country_codes/">Country and Region Codes</a>.', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_country', $settings['settings'], '' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_custom_address',
+							'filter_value' => 'true',
+						),
+
+
+
+					'paypal_completed_entry_status' => array(
+						'name' => __( 'Entry status after payment completed', 'super-forms' ),
+						'label' => sprintf(__( 'You can add custom statuses via %sSuper Forms > Settings > Backend Settings%s if needed', 'super-forms' ), '<a target="blank" href="' . admin_url() . 'admin.php?page=super_settings#backend">', '</a>' ),
+						'default' => SUPER_Settings::get_value(0, 'paypal_completed_entry_status', $settings['settings'], 'completed' ),
+						'type' => 'select',
+						'values' => $statuses,
+						'filter' => true,
+						'parent' => 'paypal_checkout',
+						'filter_value' => 'true',
 					),
-					'paypal_checkout_fees' => array(
-					'name' => __( 'Add checkout fee(s)', 'super-forms' ) . '<br /><i>' . __( 'Put each fee on a new line with values seperated by pipes "|".<br /><strong>Example with tags:</strong> {fee_name}|{amount}|{taxable}|{tax_class}<br /><strong>Example without tags:</strong> Administration fee|5|fales|\'\'<br /><strong>Allowed values:</strong> string|float|bool|string', 'super-forms' ) . '</i>',
-					'desc' => __( 'Leave blank for no fees', 'super-forms' ),
-					'type' => 'textarea',
-					'default' => SUPER_Settings::get_value( 0, 'paypal_checkout_fees', $settings['settings'], "{fee_name}|{amount}|{taxable}|{tax_class}" ),
-					'filter' => true,
-					'parent' => 'paypal_checkout',
-					'filter_value' => 'true',
+					'paypal_notify_url' => array(
+						'name' => __( 'PayPal notify URL (only for developers!)', 'super-forms' ),
+						'label' => __( 'Used for IPN (Instant payment notifications) when payment is confirmed by paypal', 'super-forms' ),
+						'default' => SUPER_Settings::get_value(0, 'paypal_notify_url', $settings['settings'], '' ),
+						'type' => 'text',
+						'filter' => true,
+						'parent' => 'paypal_advanced_settings',
+						'filter_value' => 'true',
 					),
-					// @since 1.2.2 - add custom checkout fields to checkout page
-					'paypal_checkout_fields' => array(
-					'name' => __( 'Add custom checkout field(s)', 'super-forms' ) . '<br /><i>' . __( 'Put each field on a new line with field options seperated by pipes "|".', 'super-forms' ) . '</i><br />',
-					'label' => 'Example:<br />billing_custom|{billing_custom}|Billing custom|This is a custom field|text|billing|true|true|super-billing-custom|super-billing-custom-label|red,Red;blue,Blue;green,Green<br /><strong>Available field options:</strong><br /><strong>name</strong> - the field name<br /><strong>value</strong> - the field value ({tags} can be used here)<br /><strong>label</strong> â€“ label for the input field<br /><strong>placeholder</strong> â€“ placeholder for the input<br /><strong>type</strong> â€“ type of field (text, textarea, password, select)<br /><strong>section</strong> - billing, shipping, account, order<br /><strong>required</strong> â€“ true or false, whether or not the field is require<br /><strong>clear</strong> â€“ true or false, applies a clear fix to the field/label<br /><strong>class</strong> â€“ class for the input<br /><strong>label_class</strong> â€“ class for the label element<br /><strong>options</strong> â€“ for select boxes, array of options (key => value pairs)',
-					'desc' => __( 'Leave blank for no custom fields', 'super-forms' ),
-					'type' => 'textarea',
-					'default' => SUPER_Settings::get_value( 0, 'paypal_checkout_fields', $settings['settings'], "" ),
-					'filter' => true,
-					'parent' => 'paypal_checkout',
-					'filter_value' => 'true',
-					/*
-					name            value              label          placeholder         type section  req. clear.       class              label class           options for select boxes
-					billing_custom|{billing_custom}|Billing custom|This is a custom field|text|billing||true|true|super-billing-custom|super-billing-custom-label|red,Red;blue,Blue;green,Green
-					<strong>name</strong> - the field name<br />
-					<strong>value</strong> - the field value ({tags} can be used here)<br />
-					<strong>label</strong> â€“ label for the input field<br />
-					<strong>placeholder</strong> â€“ placeholder for the input<br />
-					<strong>type</strong> â€“ type of field (text, textarea, password, select)<br />
-					<strong>section</strong> - billing, shipping, account, order<br />
-					<strong>required</strong> â€“ true or false, whether or not the field is require<br />
-					<strong>clear</strong> â€“ true or false, applies a clear fix to the field/label<br />
-					<strong>class</strong> â€“ class for the input<br />
-					<strong>label_class</strong> â€“ class for the label element<br />
-					<strong>options</strong> â€“ for select boxes, array of options (key => value pairs)
-					*/
-					/*
-					),
-					'paypal_checkout_fields_skip_empty' => array(
-					'default' => SUPER_Settings::get_value( 0, 'paypal_checkout_fields_skip_empty', $settings['settings'], '' ),
-					'type' => 'checkbox',
-					'values' => array(
-					'true' => __( 'Only add custom field if field exists in form and not conditionally hidden', 'super-forms' ),
-					),
-					'filter' => true,
-					'parent' => 'paypal_checkout',
-					'filter_value' => 'true',
-					),
-					*/
 				)
 			);
 			if (class_exists('SUPER_Frontend_Posting')) {
