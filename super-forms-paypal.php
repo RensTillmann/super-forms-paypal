@@ -1927,37 +1927,6 @@ if (!class_exists('SUPER_PayPal')):
 
 					// Set recurring payments until canceled.
 					$message .= '<input type="hidden" name="src" value="1">';
-
-
-									// 	  $message .= '<input type="hidden" name="cbt" value="' . $continue_text . '">';
-									//    $message .= '<input type="hidden" name="sra" value="' . $recurring_retry . '">';
-									//    $message .= '<input type="hidden" name="src" value="1">';
-									//    if( $recurring_time > 1 ) {
-									//        $message .= '<input type="hidden" name="srt" value="' . $recurring_time . '">';
-									//    }
-
-
-					// a3 - the price of the subscription e.g: 5.00
-					// p3 - the period of the subscription e.g: 7 (for 7 days if t1 has value of D)
-					// t3 - the time format for the period e.g: D=days, W=weeks, M=months, Y=years
-					// Set the terms of the 1st trial period.
-					// An initial trial period that is free and lasts for seven days.
-					//$message .= '<input type="hidden" name="a1" value="0">';
-					//$message .= '<input type="hidden" name="p1" value="7">';
-					//$message .= '<input type="hidden" name="t1" value="D">';
-
-					// Set the terms of the 2nd trial period.
-					// A second trial period that costs $5.00 USD and lasts for an additional three weeks.
-					//$message .= '<input type="hidden" name="a2" value="5.00">';
-					//$message .= '<input type="hidden" name="p2" value="3">';
-					//$message .= '<input type="hidden" name="t2" value="W">';
-
-					// Set the terms of the regular subscription.
-					// The regular subscription begins four weeks after the subscriber signs up.
-					//$message .= '<input type="hidden" name="a3" value="49.99">';
-					//$message .= '<input type="hidden" name="p3" value="1">';
-					//$message .= '<input type="hidden" name="t3" value="Y">';
-
 				}
 			
 				$message .= '</form>';
