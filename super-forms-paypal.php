@@ -684,13 +684,6 @@ if (!class_exists('SUPER_PayPal')):
 						$payment_cycle = self::get_payment_cycle($txn_data, 1);
 						echo '(' . $payment_cycle . ': ' . $symbol . number_format_i18n($txn_data['mc_amount1'], 2) . ' ' . $currency_code . ')';
 					}
-					/*
-					if( isset($txn_data['profile_status']) ) {
-				        echo '';
-				    }else{
-			    		echo '';
-				    }
-			        */
 			        break;
 			    case 'pp_trial_period':
 					if( isset($txn_data['mc_amount2']) ) {
@@ -698,13 +691,6 @@ if (!class_exists('SUPER_PayPal')):
 						$payment_cycle = self::get_payment_cycle($txn_data, 2);
 						echo '(' . $payment_cycle . ': ' . $symbol . number_format_i18n($txn_data['mc_amount2'], 2) . ' ' . $currency_code . ')';
 					}
-					/*
-					if( isset($txn_data['profile_status']) ) {
-				        echo '';
-				    }else{
-			    		echo '';
-				    }
-				    */
 			        break;
 			    case 'pp_hidden_form_id':
 			    	$form_id = absint($custom[0]);
@@ -1492,7 +1478,6 @@ if (!class_exists('SUPER_PayPal')):
 				// Check if PayPal verifies the IPN data, and if so, return true.
 				if ((!is_wp_error($response)) && ($response['body'] == 'VERIFIED')) {
 					$post_type = 'super_paypal_txn';
-
 					if( $_POST['txn_type']=='subscr_signup' ) {
 						$post_status = 'publish';
 						$post_type = 'super_paypal_sub';
@@ -1501,7 +1486,6 @@ if (!class_exists('SUPER_PayPal')):
 						$post_status = $_POST['payment_status'];
 						$post_title = $_POST['txn_id'];
 					}
-					
 					$post = array(
 						'post_status' => sanitize_text_field($post_status),
 						'post_type' => $post_type,
@@ -1509,7 +1493,6 @@ if (!class_exists('SUPER_PayPal')):
 						'post_author' => absint($custom[3]),
 					);
 					$post_id = wp_insert_post($post);
-
 					if(isset($_POST['subscr_id'])){
 						add_post_meta($post_id, '_super_sub_id', $_POST['subscr_id']);
 					}
@@ -1517,7 +1500,6 @@ if (!class_exists('SUPER_PayPal')):
 						add_post_meta($post_id, '_super_sub_id', $_POST['recurring_payment_id']);
 					}
 					add_post_meta( $post_id, '_super_txn_data', $_POST );
-
 					if( $_POST['txn_type']=='subscr_signup' ) {
 						$count = get_option( 'super_paypal_sub_count', 0 );
 						update_option( 'super_paypal_sub_count', ($count+1) );
@@ -1525,7 +1507,6 @@ if (!class_exists('SUPER_PayPal')):
 						$count = get_option( 'super_paypal_txn_count', 0 );
 						update_option( 'super_paypal_txn_count', ($count+1) );
 					}
-
 					if( (isset($custom[2])) && ($custom[2]!=0) ) {
 						$contact_entry_id = absint($custom[2]);
 
@@ -1537,8 +1518,6 @@ if (!class_exists('SUPER_PayPal')):
 							update_post_meta( $contact_entry_id, '_super_contact_entry_status', $settings['paypal_completed_entry_status'] );
 						}
 					}
-
-
 					// Update post status after succesfull payment (only used for Front-end Posting add-on)
 					$post_id = absint($custom[4]);
 					if( ($post_id!=0) && (!empty($settings['paypal_completed_post_status'])) ) {
@@ -1549,7 +1528,6 @@ if (!class_exists('SUPER_PayPal')):
 							)
 						);
 					}
-
 					// Update user status after succesfull payment (only used for Front-end Register & Login add-on)
 					if( !empty($settings['register_login_action']) ) {
 						if( $settings['register_login_action']=='register' ) {
@@ -1559,143 +1537,7 @@ if (!class_exists('SUPER_PayPal')):
 							}
 						}
 					}
-
-					/*
-					array (
-					'payment_type' => 'instant',
-					'payment_date' => 'Fri Oct 27 2017 04:50:34 GMT+0200 (W. Europe Daylight Time)',
-					'payment_status' => 'Pending',
-					'address_status' => 'confirmed',
-					'payer_status' => 'verified',
-					'first_name' => 'John',
-					'last_name' => 'Smith',
-					'payer_email' => 'buyer@paypalsandbox.com',
-					'payer_id' => 'TESTBUYERID01',
-					'address_name' => 'John Smith',
-					'address_country' => 'United States',
-					'address_country_code' => 'US',
-					'address_zip' => '95131',
-					'address_state' => 'CA',
-					'address_city' => 'San Jose',
-					'address_street' => '123 any street',
-					'business' => 'seller@paypalsandbox.com',
-					'receiver_email' => 'payments@feeling4design.nl',
-					'receiver_id' => 'seller@paypalsandbox.com',
-					'residence_country' => 'US',
-					'item_name' => 'something',
-					'item_number' => 'AK-1234',
-					'quantity' => '1',
-					'shipping' => '3.04',
-					'tax' => '2.02',
-					'mc_currency' => 'USD',
-					'mc_fee' => '0.44',
-					'mc_gross' => '12.34',
-					'mc_gross_1' => '9.34',
-					'txn_type' => 'web_accept',
-					'txn_id' => '648922799',
-					'notify_version' => '2.1',
-					'custom' => '29843|product|29893',
-					'invoice' => 'abc1234',
-					'test_ipn' => '1',
-					'verify_sign' => 'AGZ8HxQxRw4vURLHOXfoPe2h1BgGAD5GtpNSIhh5q1r5Q3q3ARR.dTMP',
-					)
-					*/
 				}
-				/*
-				global $wpdb;
-				$req = 'cmd=_notify-validate';
-				foreach( $_POST as $key => $value ) {
-				$value = urlencode( stripslashes( $value ) );
-				$req .= "&$key=$value";
-				}
-				$customs = explode( '|', $_POST['custom'] );
-				$form_id = $customs[1];
-				if (!$form_id) return;
-				$form_data = $wpdb->get_results($wpdb->prepare('SELECT * FROM ' . $wpdb->prefix . 'arf_paypal_forms WHERE form_id = %d', $form_id));
-				if (count($form_data) == 0)
-				return;
-				$form_data = $form_data[0];
-				$options = maybe_unserialize($form_data->options);
-				$sandbox = ( isset($options['paypal_mode']) and $options['paypal_mode'] == 0 ) ? 'sandbox.' : '';
-				$url = "https://www." . $sandbox . "paypal.com/cgi-bin/webscr/";
-				$request = new WP_Http();
-				$response = $request->post($url, array("sslverify" => false, "ssl" => true, "body" => $req, "timeout" => 20));
-				if (!is_wp_error($response) and $response['body'] == 'VERIFIED') {
-				$txn_id = $_POST['txn_id'];
-				$payment_status = $_POST['payment_status'];
-				$item_name = $_POST['item_name'];
-				$payment_amount = $_POST['mc_gross'];
-				$payment_currency = $_POST['mc_currency'];
-				$receiver_email = $_POST['receiver_email'];
-				$payer_email = $_POST['payer_email'];
-				$quantity = $_POST["quantity"];
-				$user_id = get_current_user_id();
-				$payment_date = $_POST['payment_date'];
-				$payer_name = $_POST['first_name'] . ' ' . $_POST['last_name'];
-				$entry_id = $customs[1];
-				$payment_type = $customs[2];
-				$insert_array = array(
-				'txn_id' => $txn_id,
-				'item_name' => $item_name,
-				'payment_status' => $payment_status,
-				'mc_gross' => floatval($payment_amount),
-				'mc_currency' => $payment_currency,
-				'quantity' => $quantity,
-				'payer_email' => $payer_email,
-				'payer_name' => $payer_name,
-				'payment_type' => $payment_type,
-				'user_id' => $user_id,
-				'entry_id' => $entry_id,
-				'form_id' => $form_id,
-				'payment_date' => $payment_date,
-				'created_at' => current_time('mysql' ),
-				'is_verified' => 1,
-				);
-				$wpdb->insert($wpdb->prefix . 'arf_paypal_order', $insert_array, array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d', '%s', '%s', '%d'));
-				update_option('IPN_LOG' . $form_id . '_' . time(), maybe_serialize($_POST));
-				do_action('arf_after_paypal_successful_paymnet', $form_id, $entry_id, $txn_id);
-				if (isset($options['notification']) and $options['notification'] and $this->is_arforms_support()) {
-				global $arfsettings;
-				$arf_form_data = $wpdb->get_results($wpdb->prepare("SELECT * FROM " . $wpdb->prefix . "arf_forms WHERE id = %d", $form_id));
-				$arf_form_data = $arf_form_data[0];
-				$arf_options = maybe_unserialize($arf_form_data->options);
-				$arfblogname = wp_specialchars_decode(get_option('blogname' ), ENT_QUOTES);
-				$admin_email = $arf_options['reply_to'];
-				if (!is_email($admin_email))
-				$admin_email = $arfsettings->reply_to;
-				$admin_from_reply = $arf_options['ar_admin_from_email'];
-				if (!is_email($admin_from_reply))
-				$admin_from_reply = $admin_email;
-				$reply_to_name = (isset($arf_options['ar_admin_from_name'])) ? $arf_options['ar_admin_from_name'] : $arfsettings->reply_to_name;
-				$subject = __( 'Payment received on', 'ARForms-paypal') . ' ' . $arfblogname;
-				$message = $options['email_content'];
-				$blogname = wp_specialchars_decode(get_option('blogname' ), ENT_QUOTES);
-				if (empty($message))
-				$message = $arf_paypal->defalut_email_content();
-				$item_name = $_POST['item_name'];
-				$txn_id = $_POST['txn_id'];
-				$payment_status = $_POST['payment_status'];
-				$payment_amount = $_POST['mc_gross'];
-				$payment_currency = $_POST['mc_currency'];
-				$payment_date = $_POST['payment_date'];
-				$payer_email = $_POST['payer_email'];
-				$payer_id = $_POST['payer_id'];
-				$payer_fname = $_POST['first_name'];
-				$payer_lname = $_POST['last_name'];
-				$message = str_replace('{paypal_transaction_id}', $txn_id, $message);
-				$message = str_replace('{paypal_amount}', floatval($payment_amount), $message);
-				$message = str_replace('{paypal_currency}', $payment_currency, $message);
-				$message = str_replace('{paypal_payment_date}', $payment_date, $message);
-				$message = str_replace('{paypal_site_name}', $blogname, $message);
-				$message = str_replace('{paypal_payer_email}', $payer_email, $message);
-				$message = str_replace('{paypal_payer_id}', $payer_id, $message);
-				$message = str_replace('{paypal_payer_fname}', $payer_fname, $message);
-				$message = str_replace('{paypal_payer_lname}', $payer_lname, $message);
-				$arnotifymodel->send_notification_email_user($admin_email, $subject, $message, $admin_from_reply, $reply_to_name);
-				}
-				}
-				*/
-
 			}
 			// Reply with an empty 200 response to indicate to paypal the IPN was received correctly.
 			header("HTTP/1.1 200 OK");
@@ -1796,49 +1638,29 @@ if (!class_exists('SUPER_PayPal')):
 				if ($settings['paypal_custom_return_url'] == 'true') {
 					$return_url = $settings['paypal_return_url'];
 				}
-				/*
-				$custom_data
-				if( $settings['save_contact_entry']=='yes' ) {
-				$entry_id = $atts['entry_id'];
-				}
-				$form_id = 2;
-				$payment_type = 3;
-				$home_url = get_home_url(). "/";
-				if( strstr($home_url, '?') ) {
-				$return_url = $home_url . '&page=super_paypal_response&custom=' . $entry_id . '|' . $form_id . '|' . $payment_type;
-				$notify_url = $home_url . '&page=super_paypal_ipn';
-				}else{
-				$return_url = $home_url . '?page=super_paypal_response&custom=' . $entry_id . '|' . $form_id . '|' . $payment_type;
-				$notify_url = $home_url . '?page=super_paypal_ipn';
-				}
-				*/
-				// _xclick                  - The button that the person clicked was a Buy Now button.
-				// _cart                    - For shopping cart purchases. The following variables specify the kind of shopping cart button that the person clicked:
-				//                              - add â€” Add to Cart buttons for the PayPal Shopping Cart
-				//                              - display â€” View Cart buttons for the PayPal Shopping Cart
-				//                              - upload â€” The Cart Upload command for third-party carts
-				// _xclick-subscriptions    - The button that the person clicked was a Subscribe button.
-				// _xclick-auto-billing     - The button that the person clicked was an Automatic Billing button.
-				// _xclick-payment-plan     - The button that the person clicked was an Installment Plan button.
-				// _donations               - The button that the person clicked was a Donate button.
-				// _s-xclick                - The button that the person clicked was protected from tampering by using encryption, or the button was saved in the merchant's PayPal account. PayPal determines which kind of button was clicked by decoding the encrypted code or by looking up the saved button in the merchant's account.
+				
 				$cmd = '_xclick';
 				switch ($settings['paypal_payment_type']) {
-				case 'product':
-					$cmd = '_xclick';
-					break;
+				
+					// _xclick - The button that the person clicked was a Buy Now button.
+					case 'product':
+						$cmd = '_xclick';
+						break;
 
-				case 'donation':
-					$cmd = '_donations';
-					break;
+					// _donations - The button that the person clicked was a Donate button.
+					case 'donation':
+						$cmd = '_donations';
+						break;
 
-				case 'subscription':
-					$cmd = '_xclick-subscriptions';
-					break;
+					// _xclick-subscriptions - The button that the person clicked was a Subscribe button.
+					case 'subscription':
+						$cmd = '_xclick-subscriptions';
+						break;
 
-				case 'cart':
-					$cmd = '_cart';
-					break;
+					// _cart - For shopping cart purchases. The following variables specify the kind of shopping cart button that the person clicked:
+					case 'cart':
+						$cmd = '_cart';
+						break;
 				}
 				// $action = 'http://f4d.nl/dev/?page=super_paypal_ipn'; // For local testing
 				$action = 'https://www.' . ($settings['paypal_mode'] == 'sandbox' ? 'sandbox.' : '') . 'paypal.com/cgi-bin/webscr';
@@ -1947,20 +1769,15 @@ if (!class_exists('SUPER_PayPal')):
 					}
 				}
 
-				/*
+				// Handling charges. This variable is not quantity-specific. The same handling cost applies, regardless of the number of items on the order.
 				if( !empty($settings['paypal_handling']) ) {
 					$message .= '<input type="hidden" name="handling" value="' . SUPER_Common::email_tags($settings['paypal_handling'], $data, $settings) . '">';
 				}
-				if( !empty($settings['paypal_tax']) ) {
-					$message .= '<input type="hidden" name="tax" value="' . SUPER_Common::email_tags($settings['paypal_tax'], $data, $settings) . '">';
-				}
-				if( !empty($settings['paypal_tax_rate']) ) {
-					$message .= '<input type="hidden" name="tax_rate" value="' . SUPER_Common::email_tags($settings['paypal_tax_rate'], $data, $settings) . '">';
-				}
+
+				// The unit of measure if weight_cart is specified. Valid value is lbs or kgs.
 				if( !empty($settings['paypal_weight_unit']) ) {
 					$message .= '<input type="hidden" name="weight_unit" value="' . SUPER_Common::email_tags($settings['paypal_weight_unit'], $data, $settings) . '">';
 				}
-				*/
 
 				if (($cmd == '_xclick') || ($cmd == '_donations')) {
 					$message .= '<input type="hidden" name="amount" value="' . SUPER_Common::email_tags($settings['paypal_item_amount'], $data, $settings) . '">';
@@ -2579,26 +2396,6 @@ if (!class_exists('SUPER_PayPal')):
 							'desc' => __( 'This variable is not quantity-specific. The same handling cost applies, regardless of the number of items on the order.', 'super-forms' ),
 							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
 							'default' => SUPER_Settings::get_value(0, 'paypal_handling', $settings['settings'], '' ),
-							'type' => 'text',
-							'filter' => true,
-							'parent' => 'paypal_advanced_settings',
-							'filter_value' => 'true',
-						),
-						'paypal_tax' => array(
-							'name' => __( 'Tax', 'super-forms' ),
-							'desc' => __( 'Set this variable to a flat tax amount to apply to the payment regardless of the buyer\'s location. This value overrides any tax settings set in your account profile.', 'super-forms' ),
-							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
-							'default' => SUPER_Settings::get_value(0, 'paypal_tax', $settings['settings'], '' ),
-							'type' => 'text',
-							'filter' => true,
-							'parent' => 'paypal_advanced_settings',
-							'filter_value' => 'true',
-						),
-						'paypal_tax_rate' => array(
-							'name' => __( 'Tax rate', 'super-forms' ),
-							'desc' => __( 'Set this variable to a percentage that applies to the amount multiplied by the quantity selected during checkout. This value overrides any tax settings set in your account profile', 'super-forms' ),
-							'label' => __( 'You are allowed to use {tags} if needed', 'super-forms' ),
-							'default' => SUPER_Settings::get_value(0, 'paypal_tax_rate', $settings['settings'], '' ),
 							'type' => 'text',
 							'filter' => true,
 							'parent' => 'paypal_advanced_settings',
