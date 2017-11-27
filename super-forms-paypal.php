@@ -1386,6 +1386,8 @@ if (!class_exists('SUPER_PayPal')):
 						update_post_meta( $post_id, '_super_txn_data', $_POST );
 					}
 
+					do_action( 'super_after_paypal_ipn_subscription_changed', array( 'post_id'=>$post_id, 'txn_type'=>$_POST['txn_type'] ) );
+
 					// Reply with an empty 200 response to indicate to paypal the IPN was received correctly.
 					header("HTTP/1.1 200 OK");
 					die();
@@ -1401,6 +1403,8 @@ if (!class_exists('SUPER_PayPal')):
 					$post_txn_data = get_post_meta( $post_id, '_super_txn_data', true );
 					$post_txn_data['payment_status'] = 'Refunded';
 					update_post_meta( $post_id, '_super_txn_data', $post_txn_data );
+
+					do_action( 'super_after_paypal_ipn_payment_refunded', array( 'post_id'=>$post_id ) );
 
 					// Reply with an empty 200 response to indicate to paypal the IPN was received correctly.
 					header("HTTP/1.1 200 OK");
@@ -1537,6 +1541,9 @@ if (!class_exists('SUPER_PayPal')):
 							}
 						}
 					}
+
+					do_action( 'super_after_paypal_ipn_payment_verified', array( 'post_id'=>$post_id, 'post'=>$_POST ) );
+
 				}
 			}
 			// Reply with an empty 200 response to indicate to paypal the IPN was received correctly.
