@@ -214,13 +214,10 @@ if (!class_exists('SUPER_PayPal')):
 			// Filters since 1.0.0
 			register_deactivation_hook( __FILE__, array( $this, 'deactivate'));
 			add_filter( 'super_after_activation_message_filter', array( $this, 'activation_message' ), 10, 2 );
-			//add_filter( 'super_after_contact_entry_data_filter', array( $this, 'add_entry_order_link' ), 10, 2 );
+			add_filter( 'super_after_contact_entry_data_filter', array( $this, 'add_entry_order_link' ), 10, 2 );
 			
 			// Actions since 1.0.0
 			add_action( 'init', array( $this, 'register_post_types' ), 5 );
-			//add_action( 'super_front_end_posting_after_insert_post_action', array( $this, 'save_wc_order_post_session_data' ) );
-			//add_action( 'super_after_wp_insert_user_action', array( $this, 'save_wc_order_signup_session_data'));
-			add_action( 'paypal_checkout_update_order_meta', array( $this, 'update_order_meta' ), 10, 1 );
 			add_action( 'parse_request', array( $this, 'paypal_ipn'));
 
 			if ($this->is_request('admin')) {
@@ -1138,9 +1135,9 @@ if (!class_exists('SUPER_PayPal')):
 		                                    }else{
 			                                    echo '<table>';
 			                                    echo '<tr><th align="right">Purchase total</th><td align="right">' . $mc_gross . '</td></tr>';
-			                                    echo '<tr><th align="right">Sales tax</th><td align="right"></td></tr>';
-			                                    echo '<tr><th align="right">Shipping amount</th><td align="right">' . (isset($txn_data['mc_shipping']) ? number_format_i18n($txn_data['mc_shipping'], 2) : number_format_i18n(0, 2)) . ' ' . $currency_code . '</td></tr>';
-			                                    echo '<tr><th align="right">Handling amount</th><td align="right"></td></tr>';
+			                                    echo '<tr><th align="right">Sales tax</th><td align="right">' . (isset($txn_data['tax']) ? number_format_i18n($txn_data['tax'], 2) : number_format_i18n(0, 2)) . ' ' . $currency_code . '</td></tr>';
+												echo '<tr><th align="right">Shipping amount</th><td align="right">' . (isset($txn_data['mc_shipping']) ? number_format_i18n($txn_data['mc_shipping'], 2) : number_format_i18n(0, 2)) . ' ' . $currency_code . '</td></tr>';
+			                                    echo '<tr><th align="right">Handling amount</th><td align="right">' . (isset($txn_data['mc_handling']) ? number_format_i18n($txn_data['mc_handling'], 2) : number_format_i18n(0, 2)) . ' ' . $currency_code . '</td></tr>';
 			                                    echo '<tr><th align="right">Insurance</th><td align="right">' . (isset($txn_data['insurance_amount']) ? number_format_i18n($txn_data['insurance_amount'], 2) : number_format_i18n(0, 2)) . ' ' . $currency_code . '</td></tr>'; 
 			                                    echo '<tr><th align="right">Gross amount</th><td align="right">' . $mc_gross . '</td></tr>';
 			                                    echo '<tr><th align="right">PayPal fee</th><td align="right">' . number_format_i18n($txn_data['mc_fee'], 2) . ' ' . $currency_code . '</td></tr>';
@@ -1529,11 +1526,18 @@ if (!class_exists('SUPER_PayPal')):
 						update_option( 'super_paypal_txn_count', ($count+1) );
 					}
 
-					// Update contact entry status after succesfull payment
-					if( !empty($settings['paypal_completed_entry_status']) ) {
+					if( (isset($custom[2])) && ($custom[2]!=0) ) {
 						$contact_entry_id = absint($custom[2]);
-						update_post_meta( $contact_entry_id, '_super_contact_entry_status', $settings['paypal_completed_entry_status'] );
+
+						// Save paypal order ID to contact entry
+						update_post_meta( $contact_entry_id, '_super_contact_entry_paypal_order_id', $post_id );
+
+						// Update contact entry status after succesfull payment
+						if( !empty($settings['paypal_completed_entry_status']) ) {
+							update_post_meta( $contact_entry_id, '_super_contact_entry_status', $settings['paypal_completed_entry_status'] );
+						}
 					}
+
 
 					// Update post status after succesfull payment (only used for Front-end Posting add-on)
 					$post_id = absint($custom[4]);
@@ -1699,102 +1703,25 @@ if (!class_exists('SUPER_PayPal')):
 
 
 		/**
-		 * Add the WC Order link to the entry info/data page
+		 * Add the PayPal order link to the entry info/data page
 		 *
 		 * @since       1.0.0
 		 */
 		public static function add_entry_order_link($result, $data) {
-			$order_id = get_post_meta($data['entry_id'], '_super_contact_entry_wc_order_id', true);
-			if (!empty($order_id)) {
+			$order_id = get_post_meta($data['entry_id'], '_super_contact_entry_paypal_order_id', true);
+			if( !empty($order_id) ) {
 				$order_id = absint($order_id);
 				if ($order_id != 0) {
+			        $url = admin_url() . 'admin.php?page=super_paypal_txn&id=' . $order_id;
+			        if( get_post_type($order_id)==='super_paypal_sub' ) {
+			        	$url = admin_url() . 'admin.php?page=super_paypal_sub&id=' . $order_id;
+			        }
 					$result.= '<tr><th align="right">' . __( 'PayPal Order', 'super-forms') . ':</th><td><span class="super-contact-entry-data-value">';
-					$result.= '<a href="' . get_admin_url() . 'post.php?post=' . $order_id . '&action=edit">' . get_the_title($order_id) . '</a>';
+					$result.= '<a href="' . $url . '">' . get_the_title($order_id) . '</a>';
 					$result.= '</span></td></tr>';
 				}
 			}
 			return $result;
-		}
-
-
-		/**
-		 * If Front-end posting add-on is activated and being used retrieve the inserted Post ID and save it to the PayPal Order
-		 *
-		 *  @since      1.0.0
-		 */
-		function save_wc_order_post_session_data($data){
-			global $paypal;
-			// Check if Front-end Posting add-on is activated
-			if (class_exists('SUPER_Frontend_Posting')) {
-				$post_id = absint($data['post_id']);
-				$settings = $data['atts']['settings'];
-				if ((isset($settings['frontend_posting_action'])) && ($settings['frontend_posting_action'] == 'create_post')) {
-					$paypal->session->set('_super_wc_post', array(
-						'post_id' => $post_id,
-						'status' => $settings['paypal_post_status']
-					));
-				}
-				else {
-					$paypal->session->set('_super_wc_post', array());
-				}
-			}
-			else {
-				$paypal->session->set('_super_wc_post', array());
-			}
-		}
-
-
-		/**
-		 * If Register & Login add-on is activated and being used retrieve the created User ID and save it to the PayPal Order
-		 *
-		 *  @since      1.0.0
-		 */
-		function save_wc_order_signup_session_data($data){
-			global $paypal;
-			// Check if Register & Login add-on is activated
-			if (class_exists('SUPER_Register_Login')) {
-				$user_id = absint($data['user_id']);
-				$settings = $data['atts']['settings'];
-				if ((isset($settings['register_login_action'])) && ($settings['register_login_action'] == 'register')) {
-					$paypal->session->set('_super_wc_signup', array(
-						'user_id' => $user_id,
-						'status' => $settings['paypal_signup_status']
-					));
-				}
-				else {
-					$paypal->session->set('_super_wc_signup', array());
-				}
-			}
-			else {
-				$paypal->session->set('_super_wc_signup', array());
-			}
-		}
-
-
-		/**
-		 * Set the post ID and status to the order post_meta so we can update it after payment completed
-		 *
-		 * @since       1.0.0
-		 */
-		public static function update_order_meta($order_id) {
-			// @since 1.0.0 - save the custom fields to the order, so we can retrieve it in back-end for later use
-			$custom_fields = SUPER_Forms()->session->get('_super_wc_custom_fields');
-			update_post_meta($order_id, '_super_wc_custom_fields', $custom_fields);
-			foreach($custom_fields as $k => $v) {
-				if (!empty($_POST[$v['name']])) {
-					update_post_meta($order_id, $v['name'], sanitize_text_field($_POST[$v['name']]));
-				}
-			}
-			// @since 1.0.0 - save entry data to the order
-			$data = SUPER_Forms()->session->get('_super_paypal_entry_data');
-			update_post_meta($order_id, '_super_paypal_entry_data', $data);
-			global $paypal;
-			$_super_wc_post = $paypal->session->get('_super_wc_post', array());
-			update_post_meta($order_id, '_super_wc_post', $_super_wc_post);
-			$_super_wc_signup = $paypal->session->get('_super_wc_signup', array());
-			update_post_meta($order_id, '_super_wc_signup', $_super_wc_signup);
-			$_super_entry_id = $paypal->session->get('_super_entry_id', array());
-			update_post_meta($_super_entry_id['entry_id'], '_super_contact_entry_wc_order_id', $order_id);
 		}
 
 
