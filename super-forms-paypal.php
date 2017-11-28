@@ -2693,7 +2693,7 @@ if (!class_exists('SUPER_PayPal')):
 			if (class_exists('SUPER_Frontend_Posting')) {
 				$array['paypal_checkout']['fields']['paypal_completed_post_status'] = array(
 					'name' => __( 'Post status after payment complete', 'super-forms' ),
-					'desc' => __( 'Only used for Front-end posting (publish, future, draft, pending, private, trash, auto-draft)?', 'super-forms' ),
+					'desc' => __( 'Only used for Front-end posting (publish, future, draft, pending, private, trash, auto-draft)', 'super-forms' ),
 					'default' => SUPER_Settings::get_value(0, 'paypal_completed_post_status', $settings['settings'], 'publish' ),
 					'type' => 'select',
 					'values' => array(
@@ -2713,7 +2713,7 @@ if (!class_exists('SUPER_PayPal')):
 			if (class_exists('SUPER_Register_Login')) {
 				$array['paypal_checkout']['fields']['paypal_completed_signup_status'] = array(
 					'name' => __( 'Registered user login status after payment complete', 'super-forms' ),
-					'desc' => __( 'Only used for Register & Login add-on (active, pending, blocked)?', 'super-forms' ),
+					'desc' => __( 'Only used for Register & Login add-on (active, pending, blocked)', 'super-forms' ),
 					'default' => SUPER_Settings::get_value(0, 'paypal_completed_signup_status', $settings['settings'], 'active' ),
 					'type' => 'select',
 					'values' => array(
