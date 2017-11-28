@@ -216,6 +216,7 @@ if (!class_exists('SUPER_PayPal')):
 			add_filter( 'super_after_activation_message_filter', array( $this, 'activation_message' ), 10, 2 );
 			add_filter( 'super_after_contact_entry_data_filter', array( $this, 'add_entry_order_link' ), 10, 2 );
 			
+
 			// Actions since 1.0.0
 			add_action( 'init', array( $this, 'register_post_types' ), 5 );
 			add_action( 'parse_request', array( $this, 'paypal_ipn'));
@@ -239,8 +240,9 @@ if (!class_exists('SUPER_PayPal')):
 				add_action( 'manage_super_paypal_sub_posts_custom_column', array( $this, 'super_custom_columns' ), 10, 2 );
                 add_action( 'all_admin_notices', array( $this, 'display_activation_msg' ) );
 
+				add_action( 'current_screen', array( $this, 'after_screen' ), 0 );
 				add_action( 'current_screen', array( $this, 'reset_paypal_counter' ) );
-
+				add_action( 'restrict_manage_posts', array( $this, 'filter_form_dropdown' ) );
 
 			}
 			if ($this->is_request('ajax')) {
@@ -254,6 +256,120 @@ if (!class_exists('SUPER_PayPal')):
 			add_action( 'super_after_wp_insert_user_action', array( $this, 'save_user_id' ) );
 
 		}
+
+        
+
+
+        /**
+         * Adjust filter/search for transactions and subscriptions
+         *
+         * @param  string $current_screen
+         * 
+         * @since		1.0.0
+        */
+        public function after_screen( $current_screen ) {
+            if( $current_screen->id=='edit-super_paypal_txn' ) {
+                add_filter( 'posts_where', array( $this, 'custom_posts_where' ), 0, 2 );
+                add_filter( 'posts_join', array( $this, 'custom_posts_join' ), 0, 2 );
+                add_filter( 'posts_groupby', array( $this, 'custom_posts_groupby' ), 0, 2 );
+            }
+        }
+
+        /**
+         * Add form filter dropdown
+         *
+         *  @since      1.0.0
+        */
+		public static function filter_form_dropdown($post_type) {
+            if( $post_type=='super_paypal_txn') {
+                echo '<select name="super_form_filter">';
+                $args = array(
+                    'post_type' => 'super_form',
+                    'posts_per_page' => -1
+                );
+                $forms = get_posts( $args );
+                if(count($forms)==0){
+                    echo '<option value="0">' . __( 'No forms found', 'super-forms' ) . '</option>';
+                }else{
+                    $super_form_filter = (isset($_GET['super_form_filter']) ? $_GET['super_form_filter'] : 0);
+                    echo '<option value="0">' . __( 'All forms', 'super-forms' ) . '</option>';
+                    foreach( $forms as $value ) {
+                        echo '<option value="' . $value->ID . '" ' . ($value->ID==$super_form_filter ? 'selected="selected"' : '') . '>' . $value->post_title . '</option>';
+                    }
+                }
+                echo '</select>';
+            }
+        }
+
+        /**
+         * Hook into the where query to filter custom meta data
+         *
+         *  @since      1.0.0
+        */
+        public static function custom_posts_where( $where, $object ) {
+            global $wpdb;
+            $table = $wpdb->prefix . 'posts';
+            $table_meta = $wpdb->prefix . 'postmeta';
+            $where = "";
+            if( (isset($_GET['s'])) && ($_GET['s']!='') ) {
+                $s = sanitize_text_field($_GET['s']);
+                $where .= "AND (";
+                    $where .= "($table.post_title LIKE '%$s%') OR";
+                    $where .= "($table_meta.meta_key = '_super_txn_data' AND $table_meta.meta_value LIKE '%$s%')"; // @since 3.4.0 - custom entry status
+                $where .= ")";
+            }
+            if( (isset($_GET['super_form_filter'])) && (absint($_GET['super_form_filter'])!=0) ) {
+                $super_form_filter = absint($_GET['super_form_filter']);
+                $where .= "AND (";
+                    $where .= "($table.post_parent = $super_form_filter)";
+                $where .= ")";
+            }
+            if( (isset($_GET['post_status'])) && ($_GET['post_status']!='') && ($_GET['post_status']!='all') ) {
+                $post_status = sanitize_text_field($_GET['post_status']);
+                $where .= "AND (";
+                    $where .= "($table.post_status = '$post_status')";
+                $where .= ")";
+            }else{
+                $where .= "AND (";
+                    $where .= "($table.post_status != 'trash')";
+                $where .= ")";     
+            }
+            $where .= "AND (";
+                $where .= "($table.post_type = 'super_paypal_txn')";
+            $where .= ")";
+            return $where;
+        }
+
+        /**
+         * Hook into the join query to filter custom meta data
+         *
+         *  @since      1.0.0
+        */
+        public static function custom_posts_join( $join, $object ) {
+            if( (isset($_GET['s'])) && ($_GET['s']!='') ) {
+                global $wpdb;
+                $prefix = $wpdb->prefix;
+                $table_posts = $wpdb->prefix . 'posts';
+                $table_meta = $wpdb->prefix . 'postmeta';
+                $join = "INNER JOIN $table_meta ON $table_meta.post_id = $table_posts.ID";
+            }
+            return $join;
+        }
+
+        /**
+         * Hook into the groupby query to filter custom meta data
+         *
+         *  @since      1.0.0
+        */
+        public static function custom_posts_groupby( $groupby, $object ) {
+            if( (isset($_GET['s'])) && ($_GET['s']!='') ) {
+                global $wpdb;
+                $table = $wpdb->prefix . 'posts';
+                $groupby = "$table.ID";
+            }
+            return $groupby;
+        }
+
 
 		/**
 		 * Save Post ID into session after inserting post with Front-end Posting Add-on
@@ -674,7 +790,8 @@ if (!class_exists('SUPER_PayPal')):
 			    				echo '(' . $payment_cycle . ': ' . $symbol . number_format_i18n($amount_per_cycle, 2) . ' ' . $currency_code . ')';
 			    			}
 			    		}else{
-				        	echo $txn_data['quantity'] . 'x — <strong>' . $txn_data['item_name'] . '</strong>';
+				        	echo $txn_data['quantity'] . 'x — <strong>' . $txn_data['item_name'] . '</strong><br />';
+				        	echo '(' . $symbol . number_format_i18n($txn_data['mc_gross'], 2) . ' ' . $currency_code . ')';
 			    		}
 			    	}
 			        break;
@@ -1004,7 +1121,6 @@ if (!class_exists('SUPER_PayPal')):
 													<div class="misc-pub-section">
 		                                                <?php echo '<span>' . __('Based on Form', 'super-forms' ) . ':'; ?> <?php echo '<a href="admin.php?page=super_create_form&id=' . $custom[0] . '"><strong>' . get_the_title( $custom[0] ) . '</strong></a></span>'; ?>
 		                                            </div>
-
 
 		                                            <div class="clear"></div>
 		                                        </div>
@@ -1494,7 +1610,8 @@ if (!class_exists('SUPER_PayPal')):
 						'post_status' => sanitize_text_field($post_status),
 						'post_type' => $post_type,
 						'post_title' => sanitize_text_field($post_title),
-						'post_author' => absint($custom[3]),
+						'post_parent' => absint($custom[0]),
+						'post_author' => absint($custom[3])
 					);
 					$post_id = wp_insert_post($post);
 					if(isset($_POST['subscr_id'])){
