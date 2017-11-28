@@ -20,10 +20,10 @@
 </p>
 
 <h2>Transactions listing:</h2>
-<img src="http://f4d.nl/super-forms/wp-content/uploads/2017/11/transactions.png" />
+<a href="http://f4d.nl/super-forms/wp-content/uploads/2017/11/transactions.png" target="_blank"><img src="http://f4d.nl/super-forms/wp-content/uploads/2017/11/transactions.png" /></a>
 
 <h2>Subscriptions listing:</h2>
-<img src="http://f4d.nl/super-forms/wp-content/uploads/2017/11/subscriptions.png" />
+<a href="http://f4d.nl/super-forms/wp-content/uploads/2017/11/subscriptions.png" target="_blank"><img src="http://f4d.nl/super-forms/wp-content/uploads/2017/11/subscriptions.png" /></a>
 
 <h2>Settings / Options:</h2>
 <img src="http://f4d.nl/super-forms/wp-content/uploads/2017/11/settings1.png" />
@@ -103,7 +103,7 @@
 	<strong>To add 5 times a 3.49 dollar product write it like below:</strong><br />3.49|5|Flowers<br />
 	<strong>Below you can see a full example with {tags}:</strong><br />
 	{price}|{quantity}|{item_name}|{tax}|{shipping}|{shipping2}|{discount_amount}|{discount_rate}<br />
-	For more information about each option read the <a target="_blank" href="https://developer.paypal.com/docs/classic/paypal-payments-standard/integration-guide/Appx_websitestandard_htmlvariables/#individual-items-variables">PayPal\'s Variable Reference</a>
+	For more information about each option read the <a target="_blank" href="https://developer.paypal.com/docs/classic/paypal-payments-standard/integration-guide/Appx_websitestandard_htmlvariables/#individual-items-variables">PayPal's Variable Reference</a>
 	</li>
 	<li><strong>Cart tax</strong><br /> - Cart-wide tax, overriding any individual item tax value</li>
 	<li><strong>Cart weight</strong><br /> - This value overrides the weight values of individual items. If profile-based shipping rates are configured with a basis of weight, PayPal uses this value to calculate the shipping charges for the payment.</li>
@@ -117,7 +117,7 @@
 	<li><strong>Language for the billing information/log-in page</strong><br /> - Sets the language for the billing information/log-in page only. Default is US.</li>
 	<li><strong>Character set and character encoding for the billing information/log-in page</strong><br /> - Sets the character set and character encoding for the billing information/log-in page on the PayPal website. In addition, this variable sets the same values for information that you send to PayPal in your HTML button code. Default is based on the language encoding settings in your account profile.</li>
 	<li><strong>Handling charges</strong><br /> - This variable is not quantity-specific. The same handling cost applies, regardless of the number of items on the order.</li>
-	<li><strong>Allow buyers to specify the quantity</li>
+	<li><strong>Allow buyers to specify the quantity</strong></li>
 	<li><strong>Select weight unit</strong><br /> - The unit of measure if weight is specified.</li>
 	<li><strong>Invoice number</strong><br /> - Use to identify your invoice number for this purchase.</li>
 	<li><strong>The area code for U.S. phone numbers, or the country code for phone numbers outside the U.S.</strong><br /> - PayPal fills in the buyer's home phone number automatically.</li>
