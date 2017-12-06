@@ -2294,49 +2294,6 @@ if (!class_exists('SUPER_PayPal')):
 						),
 
 
-					// GENERAL CHECKOUT SETTINGS
-
-						// Custom return URL
-						'paypal_custom_return_url' => array(
-							'default' => SUPER_Settings::get_value(0, 'paypal_custom_return_url', $settings['settings'], '' ),
-							'type' => 'checkbox',
-							'values' => array(
-								'true' => __( 'Enable custom return URL', 'super-forms' ),
-							),
-							'filter' => true,
-							'parent' => 'paypal_checkout',
-							'filter_value' => 'true',
-						),
-
-						// PayPal return URL
-						// The URL to which PayPal redirects buyers' browser after they complete their payments.
-						// For example, specify a URL on your site that displays a hank you for your payment page.
-						'paypal_return_url' => array(
-							'name' => __( 'PayPal return URL (when user successfully returns from paypal)', 'super-forms' ),
-							'desc' => __( 'The URL to which PayPal posts information about the payment, in the form of Instant Payment Notification messages.', 'super-forms' ),
-							'label' => __( 'User will be redirected to this URL after making a payment', 'super-forms' ),
-							'default' => SUPER_Settings::get_value(0, 'paypal_return_url', $settings['settings'], get_home_url() . '/my-custom-thank-you-page' ),
-							'type' => 'text',
-							'filter' => true,
-							'parent' => 'paypal_custom_return_url',
-							'filter_value' => 'true',
-						),
-
-						// Cancel URL when order was canceled by the user
-						// A URL to which PayPal redirects the buyers' browsers if they cancel checkout before completing their payments.
-						// For example, specify a URL on your website that displays the Payment Canceled page.
-						'paypal_cancel_url' => array(
-							'name' => __( 'PayPal cancel URL (when payment is canceled by user)', 'super-forms' ),
-							'label' => __( 'User that cancels payment will be redirected to this URL', 'super-forms' ),
-							'default' => SUPER_Settings::get_value(0, 'paypal_cancel_url', $settings['settings'], get_home_url() . '/my-custom-canceled-page' ),
-							'type' => 'text',
-							'filter' => true,
-							'parent' => 'paypal_checkout',
-							'filter_value' => 'true',
-						),
-
-
-
 					// SUBSCRIPTION CHECKOUT SETTINGS
 
 						// Subscription settings
@@ -2351,7 +2308,6 @@ if (!class_exists('SUPER_PayPal')):
 							'parent' => 'paypal_payment_type',
 							'filter_value' => 'subscription',
 						),
-
 
 
 					// CART CHECKOUT SETTINGS
@@ -2449,6 +2405,50 @@ if (!class_exists('SUPER_PayPal')):
 							'parent' => 'paypal_payment_type',
 							'filter_value' => 'cart',
 						),
+
+						
+
+					// GENERAL CHECKOUT SETTINGS
+
+						// Custom return URL
+						'paypal_custom_return_url' => array(
+							'default' => SUPER_Settings::get_value(0, 'paypal_custom_return_url', $settings['settings'], '' ),
+							'type' => 'checkbox',
+							'values' => array(
+								'true' => __( 'Enable custom return URL', 'super-forms' ),
+							),
+							'filter' => true,
+							'parent' => 'paypal_checkout',
+							'filter_value' => 'true',
+						),
+
+						// PayPal return URL
+						// The URL to which PayPal redirects buyers' browser after they complete their payments.
+						// For example, specify a URL on your site that displays a hank you for your payment page.
+						'paypal_return_url' => array(
+							'name' => __( 'PayPal return URL (when user successfully returns from paypal)', 'super-forms' ),
+							'desc' => __( 'The URL to which PayPal posts information about the payment, in the form of Instant Payment Notification messages.', 'super-forms' ),
+							'label' => __( 'User will be redirected to this URL after making a payment', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_return_url', $settings['settings'], get_home_url() . '/my-custom-thank-you-page' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_custom_return_url',
+							'filter_value' => 'true',
+						),
+
+						// Cancel URL when order was canceled by the user
+						// A URL to which PayPal redirects the buyers' browsers if they cancel checkout before completing their payments.
+						// For example, specify a URL on your website that displays the Payment Canceled page.
+						'paypal_cancel_url' => array(
+							'name' => __( 'PayPal cancel URL (when payment is canceled by user)', 'super-forms' ),
+							'label' => __( 'User that cancels payment will be redirected to this URL', 'super-forms' ),
+							'default' => SUPER_Settings::get_value(0, 'paypal_cancel_url', $settings['settings'], get_home_url() . '/my-custom-canceled-page' ),
+							'type' => 'text',
+							'filter' => true,
+							'parent' => 'paypal_checkout',
+							'filter_value' => 'true',
+						),
+
 
 
 
