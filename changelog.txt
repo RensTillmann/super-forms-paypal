@@ -1,2 +1,5 @@
+Jan 19, 2018 - Version 1.0.1
+- Fix: When a user was created with Register & Login add-on, and later deleted PHP would throw error on txn page under "Created User".
+
 Nov 30, 2017 - Version 1.0.0
 - Initial release!

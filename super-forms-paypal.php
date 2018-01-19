@@ -11,7 +11,7 @@
  * Plugin Name: Super Forms - PayPal Checkout
  * Plugin URI:  http://codecanyon.net/item/super-forms-drag-drop-form-builder/13979866
  * Description: Checkout with PayPal after form submission. Charge users for registering or posting content.
- * Version:     1.0.0
+ * Version:     1.0.1
  * Author:      feeling4design
  * Author URI:  http://codecanyon.net/user/feeling4design
  */
@@ -36,7 +36,7 @@ if (!class_exists('SUPER_PayPal')):
 		 *
 		 *  @since      1.0.0
 		 */
-		public $version = '1.0.0';
+		public $version = '1.0.1';
 
 		
 		/**
@@ -1106,15 +1106,17 @@ if (!class_exists('SUPER_PayPal')):
 		                                           	}
 
 		                                           	// Check if there was a user created 
-		                                           	if( (isset($custom[5])) && ($custom[5]!=0) ) {
+		                                           	if( !empty($custom[5]) ) {
 														$user_id = absint($custom[5]);
 														$edit_link = get_edit_user_link($user_id);
 														$user_info = get_userdata( $user_id );
-														?>
-														<div class="misc-pub-section">
-		                                                	<?php echo '<span>' . __('Created User', 'super-forms' ) . ':'; ?> <?php echo '<a href="' . $edit_link . '"><strong>' . $user_info->user_login . '</strong></a></span>'; ?>
-		                                            	</div>
-		                                           		<?php
+		                                           		if( $user_info ) { // @since 1.0.1 - check if user exists
+															?>
+															<div class="misc-pub-section">
+			                                                	<?php echo '<span>' . __('Created User', 'super-forms' ) . ':'; ?> <?php echo '<a href="' . $edit_link . '"><strong>' . $user_info->user_login . '</strong></a></span>'; ?>
+			                                            	</div>
+			                                           		<?php
+		                                           		}
 		                                           	}
 		                                           	?>
 
