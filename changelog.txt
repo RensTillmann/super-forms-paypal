@@ -1,3 +1,6 @@
+Feb 15, 2018 - Version 1.0.2
+- Fix: Allow settings to be empty for new Super Forms versions (values that can be left empty must not be overwritten by default value)
+
 Jan 19, 2018 - Version 1.0.1
 - Fix: When a user was created with Register & Login add-on, and later deleted PHP would throw error on txn page under "Created User".
 

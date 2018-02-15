@@ -11,7 +11,7 @@
  * Plugin Name: Super Forms - PayPal Checkout
  * Plugin URI:  http://codecanyon.net/item/super-forms-drag-drop-form-builder/13979866
  * Description: Checkout with PayPal after form submission. Charge users for registering or posting content.
- * Version:     1.0.1
+ * Version:     1.0.2
  * Author:      feeling4design
  * Author URI:  http://codecanyon.net/user/feeling4design
  */
@@ -36,7 +36,7 @@ if (!class_exists('SUPER_PayPal')):
 		 *
 		 *  @since      1.0.0
 		 */
-		public $version = '1.0.1';
+		public $version = '1.0.2';
 
 		
 		/**
@@ -2147,7 +2147,7 @@ if (!class_exists('SUPER_PayPal')):
 
 					'paypal_payment_type' => array(
 						'name' => __( 'PayPal payment method', 'super-forms' ),
-						'default' => SUPER_Settings::get_value(0, 'paypal_payment_type', $settings['settings'], '_xclick' ),
+						'default' => SUPER_Settings::get_value(0, 'paypal_payment_type', $settings['settings'], 'product' ),
 						'type' => 'select',
 						'values' => array(
 							'product' => __( 'Single product or service checkout', 'super-forms' ),
@@ -2174,6 +2174,7 @@ if (!class_exists('SUPER_PayPal')):
 							'filter' => true,
 							'parent' => 'paypal_payment_type',
 							'filter_value' => 'product,donation,subscription',
+							'allow_empty' => true,
 						),
 
 						// Item price
@@ -2187,6 +2188,7 @@ if (!class_exists('SUPER_PayPal')):
 							'filter' => true,
 							'parent' => 'paypal_payment_type',
 							'filter_value' => 'product,donation',
+							'allow_empty' => true,
 						),
 
 
@@ -2203,6 +2205,7 @@ if (!class_exists('SUPER_PayPal')):
 							'filter' => true,
 							'parent' => 'paypal_payment_type',
 							'filter_value' => 'product',
+							'allow_empty' => true,
 						),
 
 						// Weight of item
@@ -2436,6 +2439,7 @@ if (!class_exists('SUPER_PayPal')):
 							'filter' => true,
 							'parent' => 'paypal_custom_return_url',
 							'filter_value' => 'true',
+							'allow_empty' => true,
 						),
 
 						// Cancel URL when order was canceled by the user
@@ -2449,6 +2453,7 @@ if (!class_exists('SUPER_PayPal')):
 							'filter' => true,
 							'parent' => 'paypal_checkout',
 							'filter_value' => 'true',
+							'allow_empty' => true,
 						),
 
 
