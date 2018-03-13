@@ -11,7 +11,7 @@
  * Plugin Name: Super Forms - PayPal Checkout
  * Plugin URI:  http://codecanyon.net/item/super-forms-drag-drop-form-builder/13979866
  * Description: Checkout with PayPal after form submission. Charge users for registering or posting content.
- * Version:     1.0.2
+ * Version:     1.0.3
  * Author:      feeling4design
  * Author URI:  http://codecanyon.net/user/feeling4design
  */
@@ -36,7 +36,7 @@ if (!class_exists('SUPER_PayPal')):
 		 *
 		 *  @since      1.0.0
 		 */
-		public $version = '1.0.2';
+		public $version = '1.0.3';
 
 		
 		/**
@@ -2003,8 +2003,12 @@ if (!class_exists('SUPER_PayPal')):
 												$name = str_replace("{", "", $options[$ii]); 
 												$name = str_replace("}", "", $name);
 												$name = str_replace($name, $name . '_' . ($i), $options[$ii]);
+												$value = SUPER_Common::email_tags($name, $data, $settings);
+											}else{
+												// @since 1.0.3 - in case static value is used
+												$value = $options[$ii];
 											}
-											$message .= '<input type="hidden" name="' . $v . '_' . $i . '" value="' . SUPER_Common::email_tags($name, $data, $settings) . '">';
+											$message .= '<input type="hidden" name="' . $v . '_' . $i . '" value="' . $value . '">';
 										}
 										$ii++;
 									}

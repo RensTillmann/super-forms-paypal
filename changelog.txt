@@ -1,3 +1,6 @@
+Mar 13, 2018 - Version 1.0.3
+- Fix: Bug with Cart Checkout in combination with dynamic column and with at least one static value in "Items to be added to cart"
+
 Feb 15, 2018 - Version 1.0.2
 - Fix: Allow settings to be empty for new Super Forms versions (values that can be left empty must not be overwritten by default value)
 
