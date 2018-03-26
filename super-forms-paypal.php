@@ -11,7 +11,7 @@
  * Plugin Name: Super Forms - PayPal Checkout
  * Plugin URI:  http://codecanyon.net/item/super-forms-drag-drop-form-builder/13979866
  * Description: Checkout with PayPal after form submission. Charge users for registering or posting content.
- * Version:     1.0.3
+ * Version:     1.0.4
  * Author:      feeling4design
  * Author URI:  http://codecanyon.net/user/feeling4design
  */
@@ -36,7 +36,7 @@ if (!class_exists('SUPER_PayPal')):
 		 *
 		 *  @since      1.0.0
 		 */
-		public $version = '1.0.3';
+		public $version = '1.0.4';
 
 		
 		/**
@@ -1548,7 +1548,7 @@ if (!class_exists('SUPER_PayPal')):
 				}
 				if ($email_found == false) return;
 				// Set endpoint URL to post the verification data to
-				if (!isset($settings['paypal_mode'])) $settings['paypal_mode'] = 'sandbox';
+				if (!isset($settings['paypal_mode'])) $settings['paypal_mode'] = '';
 				$url = 'https://www.' . ($settings['paypal_mode'] == 'sandbox' ? 'sandbox.' : '') . 'paypal.com/cgi-bin/webscr';
 				// Build the body of the verification post request, adding the _notify-validate command.
 				$raw_post_data = file_get_contents('php://input');
@@ -1713,7 +1713,7 @@ if (!class_exists('SUPER_PayPal')):
 				}
 			}
 			if ((isset($settings['paypal_checkout'])) && ($settings['paypal_checkout'] == 'true')) {
-				if (!isset($settings['paypal_mode'])) $settings['paypal_mode'] = 'sandbox';
+				if (!isset($settings['paypal_mode'])) $settings['paypal_mode'] = '';
 				if (!isset($settings['paypal_payment_type'])) $settings['paypal_payment_type'] = 'product';
 				if (!isset($settings['paypal_merchant_email'])) $settings['paypal_merchant_email'] = '';
 				if (!isset($settings['paypal_cancel_url'])) $settings['paypal_cancel_url'] = get_home_url();
